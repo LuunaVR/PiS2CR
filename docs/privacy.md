@@ -8,15 +8,19 @@ Last updated: 12 November 2026
 
 By using the Extension you acknowledge that you have read this policy. If you do not agree with it, do not use the Extension. This policy should be read together with the [Terms of Service](terms.md).
 
-## 2. Who Is Responsible
+## 2. The Short Version
+
+We may log and keep whatever you do when you interact with the Extension, including your inputs, your anonymous ID, your Twitch user ID if you share it, your role, timing, and technical connection data, to the extent the law permits. We use it to run, secure, fix and improve the Extension and to enforce our terms. We do not sell your data. The rest of this policy explains the details, and this short version does not limit them.
+
+## 3. Who Is Responsible
 
 The Extension involves three parties, and each is responsible for its own handling of information.
 
-- **The Developer** provides the Extension software and the message relay described in section 6.
+- **The Developer** provides the Extension software and the message relay described in section 7.
 - **The streamer** (the channel on which the Extension is installed) runs their own Raspberry Pi and controller setup, decides who may play, and chooses the rules that apply on their channel. Information that reaches the streamer's setup is handled by the streamer, who acts independently of the Developer.
 - **Twitch Interactive, Inc.** ("Twitch") provides the platform, runs the Extension page, authenticates users and manages identity sharing under its own terms and privacy notice.
 
-## 3. Information The Extension Handles
+## 4. Information The Extension Handles
 
 | Category | What it is | When it applies |
 |---|---|---|
@@ -24,12 +28,12 @@ The Extension involves three parties, and each is responsible for its own handli
 | Channel role | Whether you are a viewer, moderator or broadcaster on this channel. | Whenever you open the Extension. |
 | Twitch user ID | Your real, numeric Twitch account ID. | Only if you press Share My Identity and grant Twitch's permission prompt. |
 | Controller inputs | The buttons and sticks you press or move, and the time of each action. | Whenever you play. |
-| Connection data | Technical data created by any internet connection, such as IP address and request time. | Whenever your browser connects to the relay. This is handled by the infrastructure provider described in section 6. |
-| Public Twitch profile details | Your Twitch username and display name, and whether you follow, subscribe or are a VIP on the channel. | Only for viewers who shared their identity, and only when the streamer's setup looks them up (section 5). |
+| Connection data | Technical data created by any internet connection, such as IP address and request time. | Whenever your browser connects to the relay. This is handled by the infrastructure provider described in section 7. |
+| Public Twitch profile details | Your Twitch username and display name, and whether you follow, subscribe or are a VIP on the channel. | Only for viewers who shared their identity, and only when the streamer's setup looks them up (section 6). |
 
-The Extension is not designed to ask for or receive your Twitch password, email address, real name, payment information, precise location, contacts or similar personal details. The viewer page does not read your Twitch chat messages. Information may also be handled in ways that are not listed in the table where that is incidental to running, securing or troubleshooting the service, as described in sections 6 and 7.
+The Extension is not designed to ask for or receive your Twitch password, email address, real name, payment information, precise location, contacts or similar personal details. The viewer page does not read your Twitch chat messages. Information may also be handled in ways that are not listed in the table where that is incidental to running, securing or troubleshooting the service, as described in sections 7 and 8.
 
-## 4. How Information Is Used
+## 5. How Information Is Used
 
 Information is used only to operate the Extension:
 
@@ -41,7 +45,7 @@ Information is used only to operate the Extension:
 
 We may also use information to diagnose and fix faults, measure and improve reliability, investigate and prevent abuse, enforce the Terms of Service, and comply with law. We do not currently use information for advertising, behavioural profiling or selling, and we do not currently run analytics on viewers.
 
-## 5. Identity Sharing And Name Lookups
+## 6. Identity Sharing And Name Lookups
 
 Sharing your identity is optional. It is required only if the streamer has chosen to limit play to followers, subscribers, VIPs or a named list.
 
@@ -50,15 +54,15 @@ Sharing your identity is optional. It is required only if the streamer has chose
 - Viewers who have not shared their identity are not named or listed in the streamer's dashboard.
 - Names looked up this way are kept in memory for a limited time (about ten minutes) and then discarded or refreshed.
 
-## 6. Where Information Goes
+## 7. Where Information Goes
 
 1. **Your browser and Twitch.** The Extension page runs inside Twitch. Twitch handles sign-in and identity sharing under its own privacy notice: <https://www.twitch.tv/p/legal/privacy-notice/>.
 2. **The relay.** A relay hosted on Cloudflare, Inc. ("Cloudflare") passes messages between your browser and the streamer's setup. The relay verifies the signed Twitch token your browser presents, checks that the request comes from Twitch, limits message rates, and forwards inputs. To do this it holds connection details (your anonymous ID, role, Twitch user ID if shared, and rate counters) for as long as your connection is open, and it briefly handles each input as it passes through. The relay is not designed to keep a permanent record of inputs. However, the relay's hosting platform may store or log requests, connection details and errors, and we may turn on logging or diagnostics at any time to investigate faults or abuse. Cloudflare may process technical connection data under its own privacy policy: <https://www.cloudflare.com/privacypolicy/>.
 3. **The streamer's setup.** Your anonymous ID, role, Twitch user ID (if shared) and inputs are delivered to the streamer's Raspberry Pi. It keeps a list of recent activity (who pressed what, and whether it was allowed) and a name cache, mainly in memory, and these are lost when the program restarts. The streamer's setup may also write operational logs, and the streamer may save settings such as a list of allowed Twitch usernames. The streamer decides what else to do with this information: for example, they may show activity on stream or on an overlay, and Twitch features such as clips and past broadcasts may capture it. Inputs and anything shown on stream are not confidential.
 
-We do not sell or rent information. We share it only with the parties described above, with service providers who help us run the Extension, in connection with a transfer of the project, and where the law requires or permits it (section 9).
+We do not sell your personal information, and we will not sell it in future without updating this policy first. We share it only with the parties described above, with service providers who help us run the Extension, in connection with a transfer of the project, and where the law requires or permits it (section 10).
 
-## 7. Retention
+## 8. Retention
 
 We do not aim to keep viewer information for longer than needed to run the Extension, but we cannot promise that none is kept. In practice:
 
@@ -68,11 +72,11 @@ We do not aim to keep viewer information for longer than needed to run the Exten
 - Records kept by Twitch and Cloudflare follow their own retention rules.
 - We may keep information for longer where needed for security, to investigate abuse, to resolve disputes, to enforce our terms, or to meet legal obligations.
 
-## 8. Cookies And Local Storage
+## 9. Cookies And Local Storage
 
 The Extension page is not designed to set cookies or use your browser's local or session storage. We may add such technologies in future if needed, and will update this policy if we do. Twitch itself may use cookies and similar technologies on its own pages and in its own frames, and your browser may keep ordinary cache data.
 
-## 9. Legal Bases And Disclosure
+## 10. Legal Bases And Disclosure
 
 Where data protection law such as the EU or UK General Data Protection Regulation applies, the Developer relies on:
 
@@ -81,15 +85,15 @@ Where data protection law such as the EU or UK General Data Protection Regulatio
 
 Information may be disclosed when required by law, court order or a valid legal request, or when needed to protect the rights, safety or property of users, the Developer or others. Where the Developer cannot identify a person from the information held, that information may not be capable of being provided back to that person.
 
-## 10. International Transfers
+## 11. International Transfers
 
 Twitch and Cloudflare operate internationally, and the streamer may be in a different country from you. Your information may therefore be processed in countries other than your own. Those providers are responsible for their own transfer safeguards.
 
-## 11. Security
+## 12. Security
 
 The Extension uses encrypted connections, verifies the signed Twitch token on every viewer connection, checks the origin of requests, validates and rebuilds every message from known fields, and rate-limits inputs. No system can be guaranteed to be completely secure, and you use the Extension at your own risk.
 
-## 12. Your Rights And Choices
+## 13. Your Rights And Choices
 
 Depending on where you live, you may have the right to ask whether information about you is held, and to ask for it to be accessed, corrected, deleted, restricted or moved, and to object to its use or withdraw consent. You can also lodge a complaint with your local data protection authority.
 
@@ -98,22 +102,22 @@ The Developer does not set out to keep a profile of viewers, so there may be lit
 - Stop sharing your identity at any time in your Twitch extension settings.
 - Close the Extension to end your connection to the relay.
 - Ask the streamer about data held on their own setup.
-- Contact the Developer using the details in section 15.
+- Contact the Developer using the details in section 16.
 
 We do not sell personal information and do not currently use it for targeted advertising. We will not treat you differently for exercising a privacy right.
 
-## 13. Children
+## 14. Children
 
 The Extension is not directed to children and follows Twitch's minimum age requirements. It must not be used by anyone under 13, or under the age of digital consent or majority in their country where that is higher, unless Twitch's own terms allow it. If you believe a child has used the Extension, contact the Developer and we will act on it.
 
-## 14. Third-Party Links And Services
+## 15. Third-Party Links And Services
 
 The Extension runs inside Twitch and relies on Twitch and Cloudflare. We are not responsible for the privacy practices of those or any other third party, including the streamer.
 
-## 15. Contact
+## 16. Contact
 
 For privacy questions or requests, open an issue at <https://github.com/LuunaVR/PiS2CR/issues> (do not post personal information there) or use the support email shown on the Extension's Twitch page.
 
-## 16. Changes To This Policy
+## 17. Changes To This Policy
 
 We may update this policy from time to time. The "Last updated" date at the top shows the latest revision, and the current version is always at <https://github.com/LuunaVR/PiS2CR/blob/main/docs/privacy.md>. Continuing to use the Extension after a change means you accept the updated policy.

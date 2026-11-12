@@ -73,7 +73,7 @@ The Extension is provided on a best-effort basis. Inputs can be delayed, dropped
 
 ## 12. Privacy
 
-Information is handled as described in the [Privacy Policy](privacy.md). You understand that your inputs and activity are not confidential: they may be logged, stored or displayed by the Developer, the streamer, Twitch, Cloudflare and others involved in running the Extension, and may be captured in streams, clips and past broadcasts. The Developer may monitor, log and review use of the Extension to run it, secure it, investigate abuse and enforce these Terms.
+Information is handled as described in the [Privacy Policy](privacy.md). You understand that your inputs and activity are not confidential: they may be logged, stored or displayed by the Developer, the streamer, Twitch, Cloudflare and others involved in running the Extension, and may be captured in streams, clips and past broadcasts. The Developer may monitor, log and review use of the Extension, including your inputs and activity, to the extent the law permits, in order to run it, secure it, investigate abuse and enforce these Terms. The Developer does not sell your personal data.
 
 ## 13. Suspension And Termination
 
