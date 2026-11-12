@@ -1,0 +1,702 @@
+<style>
+  .pane { --card: #1b1d24; --card2: #252830; --line: #2d303a; --text: #eceaf0; --muted: #9c9aa8; --accent: #9146ff; --accent-soft: #bf94ff; --accent-ink: #ffffff;
+    --chat: #a98bff; --good: #bf94ff; --bad: #ff7a8a; --warn: #9c9aa8;
+    flex: 1; min-height: 0; overflow: auto; padding: 20px 24px 48px; font-size: 15px; color: var(--text); }
+  .pane .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .pane .wrap.narrow { max-width: 760px; }
+  .pane .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .pane .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  @media (max-width: 900px) { .pane .cols { grid-template-columns: 1fr; } .pane { padding: 14px 12px 40px; } }
+  .pane .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .pane h2 { margin: 0; font-size: 20px; font-weight: 650; }
+  .pane h3 { margin: 0 0 12px; font-size: 15px; color: var(--text); font-weight: 650; }
+  .pane .muted { color: var(--muted); }
+  .pane .small { font-size: 13px; }
+  .pane .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .pane .head h3 { margin: 0; }
+
+  .pane .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: #14161a; padding: 4px; border-radius: 12px; border: 1px solid var(--line); }
+  .pane .seg button { text-align: center; background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 9px; padding: 10px 14px; cursor: pointer; font-weight: 600; font-size: 15px; font-family: inherit; }
+  .pane .seg button:hover { background: #1f2229; color: var(--text); }
+  .pane .seg button.on { background: rgba(145, 70, 255, .2); border-color: var(--accent); color: var(--text); }
+  .pane .seg.small button { padding: 7px 12px; font-size: 14px; }
+
+  .pane .btn { border: 1px solid var(--line); background: var(--card2); color: var(--text); padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s; }
+  .pane .btn:hover:not(:disabled) { border-color: #4a4f5c; background: #2c303a; }
+  .pane .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .pane .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .pane .btn.primary:hover:not(:disabled) { background: #a970ff; }
+  .pane .btn.danger { background: rgba(255, 122, 138, .12); color: var(--bad); border-color: rgba(255, 122, 138, .5); }
+  .pane .btn.danger:hover:not(:disabled) { background: var(--bad); color: #2a1015; }
+  .pane .btn.tiny { padding: 5px 10px; font-size: 13px; }
+
+  .pane .pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; background: #262a32; color: var(--muted); }
+  .pane .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .pane .pill.good { color: var(--good); background: rgba(145, 70, 255, .2); }
+  .pane .pill.warn { color: var(--warn); background: rgba(156, 154, 168, .12); }
+  .pane .pill.bad { color: var(--bad); background: rgba(255, 122, 138, .1); }
+  .pane .pill.big { height: 40px; box-sizing: border-box; padding: 0 16px; font-size: 15px; gap: 10px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); background: #262a32; }
+  .pane .pill.big::before { display: none; }
+  .pane .pill.big.good { background: rgba(145, 70, 255, .2); border-color: var(--accent); color: var(--text); }
+  .pane .pill.big.has-avatar { padding-left: 5px; }
+  .pane .pill .avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #000; }
+  .pane .btn.lg { height: 40px; padding: 0 16px; }
+
+  .pane .code { font: 700 30px Consolas, monospace; letter-spacing: .14em; color: var(--accent-soft); }
+
+  .pane .grp { display: flex; align-items: center; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .pane .grp:first-of-type { border-top: 0; padding-top: 2px; }
+  .pane .grp-body { flex: 1; min-width: 0; }
+  .pane .grp-title { font-weight: 600; width: max-content; max-width: 100%; }
+  .pane .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .pane .chip { font: 600 13px Consolas, monospace; background: #262a32; border: 1px solid var(--line); border-radius: 8px; padding: 2px 9px; }
+  .pane .chip i { font-style: normal; font-weight: 400; color: var(--muted); }
+  .pane .grp.off .chip { opacity: .4; }
+  .pane button.chip { color: var(--text); cursor: pointer; }
+  .pane button.chip:hover { border-color: #4a4f5c; }
+  .pane .chip.disabled { opacity: .4; text-decoration: line-through; }
+  .pane .alias-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+  .pane .chip.custom { display: inline-flex; align-items: center; gap: 7px; }
+  .pane .chip.custom button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
+  .pane .chip.custom button:hover { color: var(--bad); }
+
+  .pane .switch { position: relative; width: 46px; height: 26px; flex: none; }
+  .pane .switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+  .pane .switch span { position: absolute; inset: 0; background: #3a3e48; border-radius: 999px; transition: background .15s; }
+  .pane .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .pane .switch input:checked + span { background: var(--accent); }
+  .pane .switch input:checked + span::after { transform: translateX(20px); }
+  .pane .switch input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+  .pane .opt { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; font-size: 14px; }
+
+  .pane .field { display: grid; gap: 6px; margin: 0 0 14px; }
+  .pane .field:last-child { margin-bottom: 0; }
+  .pane .field > label, .pane .slider-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: 14px; }
+  .pane .slider-head output { font: 600 14px Consolas, monospace; color: var(--accent-soft); }
+  .pane input[type=range] { width: 100%; accent-color: var(--accent); }
+  .pane input[type=text], .pane input[type=number], .pane select, .pane textarea { width: 100%; box-sizing: border-box; background: #14161a; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+  .pane textarea { resize: vertical; min-height: 64px; }
+  .pane input:focus-visible, .pane select:focus-visible, .pane textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pane .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .pane .row > input[type=text] { flex: 1; min-width: 160px; }
+  .pane .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .pane .hold { margin: 0 0 12px; }
+  .pane .hold-head { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; margin-bottom: 5px; }
+  .pane .hold-head code { font: 700 14px Consolas, monospace; color: var(--chat); }
+  .pane .bar { height: 6px; background: #2a2e36; border-radius: 3px; overflow: hidden; }
+  .pane .bar i { display: block; height: 100%; background: var(--chat); }
+  .pane .empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+
+  .pane .verdict { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; background: #14161a; border: 1px solid var(--line); min-height: 20px; }
+  .pane .verdict.good { border-color: rgba(145, 70, 255, .6); color: var(--good); }
+  .pane .verdict.bad { border-color: rgba(255, 122, 138, .45); color: var(--bad); }
+  .pane .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .pane .examples button { font-family: Consolas, monospace; }
+
+  .pane .log { display: grid; gap: 2px; max-height: 360px; overflow: auto; }
+  .pane .log-row { display: grid; grid-template-columns: 74px minmax(70px, 130px) 1fr auto; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .pane .log-row:first-child { border-top: 0; }
+  .pane .log-row .t { color: var(--muted); font-size: 12px; }
+  .pane .log-row .u { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane .log-row .m { font-family: Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .pane .badge.good { color: var(--good); background: rgba(145, 70, 255, .2); }
+  .pane .badge.bad { color: var(--bad); background: rgba(255, 122, 138, .1); }
+
+  .pane .banner { background: rgba(255, 122, 138, .1); border: 1px solid rgba(255, 122, 138, .45); color: var(--bad); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+
+  .pane .rw-bar { display: flex; gap: 10px; }
+  .pane .dd { position: relative; flex: 1; min-width: 0; }
+  .pane .dd-btn { width: 100%; height: 40px; padding: 0 14px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+  .pane .dd-menu { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 6px); max-height: 280px; overflow: auto; background: #20232b; border: 1px solid #3b404b; border-radius: 12px; padding: 6px; box-shadow: 0 12px 30px rgba(0, 0, 0, .45); }
+  .pane .dd-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; box-sizing: border-box; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+  .pane .dd-item:hover:not(.locked) { background: rgba(145, 70, 255, .22); }
+  .pane .dd-item.locked { color: var(--muted); cursor: not-allowed; }
+  .pane .dd-item small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .pane .dd-empty { padding: 10px; color: var(--muted); font-size: 14px; }
+  .pane .rw-list { display: grid; gap: 8px; margin-top: 14px; }
+  .pane .rw-list:empty { display: none; }
+  .pane .reward { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; }
+  .pane .reward-main { flex: 1; min-width: 0; }
+  .pane .reward-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane .reward-meta { color: var(--muted); font-size: 13px; }
+  .pane .reward-controls { display: flex; gap: 8px; align-items: center; }
+  .pane .reward.missing .reward-title { color: var(--bad); }
+  .pane .suffix { position: relative; display: block; }
+  .pane .suffix input { padding-right: 42px; }
+  .pane .suffix > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 12px; pointer-events: none; }
+  .pane .reward-controls .suffix { width: 96px; }
+  .pane .reward-controls .suffix input { padding: 7px 38px 7px 10px; }
+  #tw-floattip { position: fixed; z-index: 90; max-width: 280px; padding: 7px 10px; border-radius: 8px; background: #2a2236; border: 1px solid #5b3f94; color: #eceaf0; font: 400 13px/1.4 Segoe UI, Arial, sans-serif; opacity: 0; pointer-events: none; transition: opacity .12s; }
+  .pane .limit { display: flex; align-items: center; gap: 12px; }
+  .pane .limit input[type=range] { flex: 1; min-width: 0; }
+  .pane .limit input[type=number] { width: 92px; flex: none; padding: 7px 8px; }
+  .pane .limit .unit { width: 14px; color: var(--muted); font-size: 13px; }
+
+  #tw-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; background: #2a2e36; color: #eceaf0; border: 1px solid #3b404b; border-radius: 12px; padding: 11px 18px; font-size: 14px; transition: opacity .2s, transform .2s; z-index: 60; max-width: 90vw; }
+  #tw-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #tw-toast.bad { border-color: #ff7a8a; }
+  dialog.tw-dialog { background: #1b1d24; color: #eceaf0; border: 1px solid #3b404b; border-radius: 16px; padding: 22px 24px; width: min(460px, 92vw); font-family: inherit; }
+  dialog.tw-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog.tw-dialog h3 { margin: 0 0 12px; font-size: 18px; text-transform: none; letter-spacing: 0; }
+  dialog.tw-dialog p { margin: 0 0 16px; line-height: 1.5; color: #c9c7d1; }
+  dialog.tw-dialog .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  dialog.tw-dialog .field { display: grid; gap: 6px; margin: 0 0 12px; font-size: 14px; }
+  dialog.tw-dialog .field > label { font-weight: 600; }
+  dialog.tw-dialog input[type=text], dialog.tw-dialog input[type=number], dialog.tw-dialog textarea, dialog.tw-dialog select { width: 100%; box-sizing: border-box; background: #14161a; color: #eceaf0; border: 1px solid #2d303a; border-radius: 10px; padding: 10px 12px; font: inherit; }
+  dialog.tw-dialog .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  dialog.tw-dialog .dlg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  dialog.tw-dialog .dlg-head h3 { margin: 0; }
+  dialog.tw-dialog .x { width: 34px; height: 34px; border-radius: 10px; border: 0; background: transparent; color: #9c9aa8; font-size: 18px; line-height: 1; cursor: pointer; }
+  dialog.tw-dialog .x:hover { background: #252830; color: #eceaf0; }
+  dialog.tw-dialog .field > label { width: max-content; max-width: 100%; }
+  dialog.tw-dialog .toggle { display: flex; align-items: center; min-height: 41px; }
+  dialog.tw-dialog .foot { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin-top: 18px; }
+  dialog.tw-dialog .btn { border: 1px solid #2d303a; background: #252830; color: #eceaf0; padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; font-family: inherit; cursor: pointer; }
+  dialog.tw-dialog .btn.primary { background: #9146ff; color: #fff; border-color: transparent; }
+  dialog.tw-dialog .btn.danger { background: rgba(255, 122, 138, .12); color: #ff7a8a; border-color: rgba(255, 122, 138, .5); margin-right: auto; }
+</style>
+
+<section id="twitch-view" class="pane" hidden>
+  <div class="wrap narrow">
+    <div id="tw-banner" class="banner" hidden></div>
+
+    <section class="card">
+      <div class="head">
+        <div>
+          <span id="tw-conn-pill" class="pill big">Loading</span>
+          <div id="tw-conn-detail" class="muted small" style="margin-top:8px" hidden></div>
+        </div>
+        <div class="row">
+          <button type="button" id="tw-connect" class="btn lg primary">Connect</button>
+          <button type="button" id="tw-cancel" class="btn lg" hidden>Cancel</button>
+          <button type="button" id="tw-disconnect" class="btn lg" hidden>Disconnect</button>
+        </div>
+      </div>
+      <div id="tw-code-box" style="margin-top:16px" hidden>
+        <div class="row" style="justify-content:space-between">
+          <span class="code" id="tw-code"></span>
+          <a id="tw-open" class="btn primary" target="_blank" rel="noopener" style="text-decoration:none">Open Twitch</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head" style="margin-bottom:12px">
+        <h3 data-tip="Open: anyone in chat can send commands. Redeem: chat gets control while a redeem's timer runs. Off: nobody can control anything.">Chat Control</h3>
+        <span id="tw-pill" class="pill">Loading</span>
+      </div>
+      <div class="seg" id="tw-mode">
+        <button type="button" data-mode="open" data-tip="Anyone in chat, any time">Open</button>
+        <button type="button" data-mode="redeem" data-tip="Opens when a viewer redeems">Redeem</button>
+        <button type="button" data-mode="off" data-tip="Nobody can control anything. Anything chat is pressing is released.">Off</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 data-tip="Who may send commands. Everyone: any viewer. VIPs: VIPs and you, plus anyone on the list. Listed Users Only: you and the people on the list. Redeems work for anyone either way.">Who Can Send Commands</h3>
+      <div class="seg" id="tw-who" style="margin-top:12px">
+        <button type="button" data-who="everyone">Everyone</button>
+        <button type="button" data-who="vips">VIPs</button>
+        <button type="button" data-who="users">Listed Users Only</button>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="tw-users" data-tip="Twitch usernames, separated by spaces or commas. You are always allowed.">Listed Users</label>
+        <textarea id="tw-users" rows="2" maxlength="2600" autocomplete="off" spellcheck="false" placeholder="name1 name2 name3"></textarea>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 data-tip="Each reward gives chat control for its own time. A redeem only counts if it gives more time than is left, and the timer is set to that time (times are not added). Any other redeem is denied after a couple of seconds so the points are refunded. Only rewards made here can be used.">Rewards</h3>
+      <div class="rw-bar">
+        <div class="dd" id="tw-dd">
+          <button type="button" id="tw-dd-btn" class="btn dd-btn" aria-haspopup="listbox" aria-expanded="false"><span>Add a Reward</span><span aria-hidden="true">&#9662;</span></button>
+          <div id="tw-dd-menu" class="dd-menu" role="listbox" hidden></div>
+        </div>
+        <button type="button" id="tw-create" class="btn lg primary">New Reward</button>
+      </div>
+      <div id="tw-rewards" class="rw-list"></div>
+    </section>
+
+    <section class="card">
+      <h3 data-tip="Chat types one command per message, like left or left 2. Words after a slash do the same thing as the first word. A number after the command is how many seconds to hold it. Click a command to turn just that one off or on.">Commands</h3>
+      <div class="grp" id="tw-multi-row">
+        <label class="switch"><input type="checkbox" id="tw-multi" aria-label="Allow Multiple Commands In One Message"><span></span></label>
+        <div class="grp-body">
+          <div class="grp-title" data-tip="A message can hold several commands, like dpadup dpadup dpaddown 2 a. They run one after another, not at once, and commands from different people can still overlap. Every word must be a command or a time, or the whole message is ignored. Commands that are turned off are skipped.">Allow Multiple Commands In One Message</div>
+        </div>
+      </div>
+      <div id="tw-groups"></div>
+      <div class="field" style="margin-top:18px">
+        <label for="tw-alias-name" data-tip="Extra names for commands, like jump for B. Letters only. A custom name does exactly what its command does, including being skipped when that command's group is turned off.">Custom Names</label>
+        <div class="alias-row">
+          <input type="text" id="tw-alias-name" maxlength="20" placeholder="jump" autocomplete="off" spellcheck="false" aria-label="New name">
+          <select id="tw-alias-target" aria-label="Does the same as"></select>
+          <button type="button" id="tw-alias-add" class="btn primary">Add</button>
+        </div>
+        <div id="tw-aliases" class="chips"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Limits</h3>
+      <div id="tw-limits"></div>
+    </section>
+  </div>
+
+  <dialog id="tw-confirm" class="tw-dialog">
+    <h3 style="color:#ff7a8a">Turn On Others?</h3>
+    <p>Plus, Minus, Home and Capture can open the Home menu, pause or quit the game, or take screenshots.
+      Anyone allowed to send commands could use them.</p>
+    <div class="row"><button type="button" class="btn" id="tw-confirm-no">Cancel</button>
+      <button type="button" class="btn danger" id="tw-confirm-yes" style="margin-right:0">Turn On</button></div>
+  </dialog>
+
+  <dialog id="tw-reward-dialog" class="tw-dialog">
+    <div class="dlg-head"><h3 id="tw-reward-heading">New Reward</h3>
+      <button type="button" class="x" id="rw-close" aria-label="Close">&#10005;</button></div>
+    <div class="field"><label for="rw-title">Name</label><input type="text" id="rw-title" maxlength="45" autocomplete="off" autofocus></div>
+    <div class="field"><label for="rw-prompt">Description</label><textarea id="rw-prompt" maxlength="200" rows="2"></textarea></div>
+    <div class="grid2">
+      <div class="field"><label for="rw-cost" data-tip="Channel points a viewer pays to redeem it">Cost</label><input type="number" id="rw-cost" min="1" step="1"></div>
+      <div class="field"><label for="rw-cooldown" data-tip="Seconds before anyone can redeem it again. 0 means no wait." data-tip-end>Cooldown</label>
+        <div class="suffix"><input type="number" id="rw-cooldown" min="0" step="1"><span>sec</span></div></div>
+      <div class="field" id="rw-minutes-field"><label for="rw-minutes" data-tip="How long chat gets control after someone redeems it">Control Time</label>
+        <div class="suffix"><input type="number" id="rw-minutes" min="0.5" step="0.5"><span>min</span></div></div>
+      <div class="field"><label data-tip="Viewers can only redeem a reward while it is enabled" data-tip-end>Enabled</label>
+        <div class="toggle"><label class="switch"><input type="checkbox" id="rw-enabled" aria-label="Enabled"><span></span></label></div></div>
+    </div>
+    <div id="rw-error" class="small" style="color:#ff7a8a; min-height:18px"></div>
+    <div class="foot"><button type="button" class="btn danger" id="rw-delete">Delete Reward</button>
+      <button type="button" class="btn primary" id="rw-save">Add</button></div>
+  </dialog>
+  <div id="tw-floattip" role="tooltip"></div>
+  <div id="tw-toast" role="status"></div>
+</section>
+
+<script>
+(() => {
+  const view = document.getElementById("twitch-view");
+  const $ = id => document.getElementById(id);
+  const LIMITS = [
+    { key: "tap_seconds", label: "Default Tap Duration", hint: "How long a command without a number is held", min: 0.1, max: 3, step: 0.1, unit: "s" },
+    { key: "max_hold_seconds", label: "Longest Hold", hint: "Commands asking for more seconds are shortened to this", min: 0.5, max: 10, step: 0.5, unit: "s" },
+    { key: "user_cooldown_seconds", label: "Cooldown", hint: "Seconds a viewer must wait between commands. 0 means no wait.", min: 0, max: 10, step: 0.1, unit: "s" },
+    { key: "max_active", label: "Max Simultaneous Commands", hint: "How many commands can run at the same time", min: 1, max: 20, step: 1, unit: "" },
+    { key: "max_commands", label: "Most Commands In One Message", hint: "Only used when multiple commands in one message are allowed. Longer messages are ignored.", min: 2, max: 20, step: 1, unit: "" },
+  ];
+  let snapshot = null, rewards = { connected: false, rewards: [] }, groupsBuilt = false, loading = false, toastTimer = null, pending = 0;
+  let editing = null;   // reward id being edited, or null when creating
+  let rewardsSignature = "", lastConn = null;
+
+  function el(tag, attrs = {}, ...kids) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v; else if (k === "text") node.textContent = v; else node.setAttribute(k, v);
+    }
+    node.append(...kids);
+    return node;
+  }
+
+  function toast(message, bad = false) {
+    const t = $("tw-toast");
+    t.textContent = message;
+    t.className = "show" + (bad ? " bad" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ""; }, 3400);
+  }
+
+  async function api(path, body) {
+    try {
+      const res = await fetch(path, body === undefined ? { cache: "no-store" } :
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = res.status === 204 ? {} : await res.json();
+      return { ok: res.ok, data };
+    } catch (e) {
+      return { ok: false, data: { error: "dashboard not reachable" } };
+    }
+  }
+
+  const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const minutes = seconds => Math.round(seconds / 6) / 10;
+
+  async function save(settings, confirmRestricted = false) {
+    pending++;
+    const { ok, data } = await api("/twitch/settings", { settings, confirm_restricted: confirmRestricted });
+    pending--;
+    if (!ok) toast(data.error || "Could not save", true);
+    await load(true);
+    return ok;
+  }
+
+  function buildLimits() {
+    const host = $("tw-limits");
+    for (const spec of LIMITS) {
+      const slider = el("input", { type: "range", id: `tw-in-${spec.key}`, min: spec.min, max: spec.max, step: spec.step, "aria-label": spec.label });
+      const box = el("input", { type: "number", id: `tw-box-${spec.key}`, min: spec.min, step: "any", "aria-label": `${spec.label} value` });
+      // The slider only covers the usual range; the box takes any value the Pi accepts.
+      slider.addEventListener("input", () => { box.value = slider.value; });
+      slider.addEventListener("change", () => save({ [spec.key]: Number(slider.value) }));
+      box.addEventListener("input", () => { if (box.value !== "") slider.value = box.value; });
+      box.addEventListener("change", () => {
+        if (box.value === "" || !Number.isFinite(Number(box.value))) { box.value = snapshot.settings[spec.key]; return; }
+        save({ [spec.key]: Number(box.value) });
+      });
+      host.append(el("div", { class: "field" },
+        el("div", { class: "slider-head" }, el("span", { text: spec.label, "data-tip": spec.hint })),
+        el("div", { class: "limit" }, slider, box, el("span", { class: "unit", text: spec.unit }))));
+    }
+  }
+
+  function buildGroups(groups) {
+    const host = $("tw-groups");
+    host.textContent = "";
+    for (const g of groups) {
+      const box = el("input", { type: "checkbox", "data-group": g.id, "aria-label": g.label });
+      box.addEventListener("change", () => toggleGroup(g, box));
+      host.append(el("div", { class: "grp", id: `tw-grp-${g.id}` },
+        el("label", { class: "switch" }, box, el("span")),
+        el("div", { class: "grp-body" },
+          el("div", { class: "grp-title", text: g.label, "data-tip": g.note }),
+          el("div", { class: "chips" }, ...g.commands.map(c => {
+            const chip = el("button", { type: "button", class: "chip", "data-command": c.name, "aria-pressed": "true",
+              "data-tip": "Click to turn just this command off or on" }, c.name,
+              ...(c.aliases.length ? [el("i", { text: " / " + c.aliases.join(" / ") })] : []));
+            chip.addEventListener("click", () => toggleCommand(c.name));
+            return chip;
+          })))));
+    }
+    groupsBuilt = true;
+  }
+
+  function toggleCommand(name) {
+    const off = new Set(snapshot.settings.disabled_commands);
+    if (!off.delete(name)) off.add(name);
+    save({ disabled_commands: [...off] });
+  }
+
+  function buildAliasTargets(groups) {
+    const select = $("tw-alias-target");
+    select.textContent = "";
+    for (const g of groups) {
+      select.append(el("optgroup", { label: g.label }, ...g.commands.map(c => el("option", { value: c.name, text: c.name }))));
+    }
+  }
+
+  let aliasSignature = "";
+  function renderAliases(aliases) {
+    const signature = JSON.stringify(aliases);
+    if (signature === aliasSignature) return;
+    aliasSignature = signature;
+    const host = $("tw-aliases");
+    host.textContent = "";
+    for (const alias of Object.keys(aliases).sort()) {
+      const remove = el("button", { type: "button", "aria-label": `Remove ${alias}`, text: "\u2715" });
+      remove.addEventListener("click", () => {
+        const next = { ...snapshot.settings.custom_aliases };
+        delete next[alias];
+        save({ custom_aliases: next });
+      });
+      host.append(el("span", { class: "chip custom" }, alias, el("i", { text: ` = ${aliases[alias]}` }), remove));
+    }
+  }
+
+  async function addAlias() {
+    const name = $("tw-alias-name").value.trim().toLowerCase();
+    if (!name) return;
+    const ok = await save({ custom_aliases: { ...snapshot.settings.custom_aliases, [name]: $("tw-alias-target").value } });
+    if (ok) $("tw-alias-name").value = "";
+  }
+
+  function confirmMenu() {
+    return new Promise(resolve => {
+      const dlg = $("tw-confirm");
+      const done = value => { dlg.close(); resolve(value); };
+      $("tw-confirm-yes").onclick = () => done(true);
+      $("tw-confirm-no").onclick = () => done(false);
+      dlg.oncancel = () => resolve(false);
+      dlg.showModal();
+    });
+  }
+
+  async function toggleGroup(g, box) {
+    const on = box.checked;
+    if (on && g.restricted && !(await confirmMenu())) { box.checked = false; return; }
+    await save({ groups: { [g.id]: on } }, on && g.restricted);
+  }
+
+  // ---- connection ---------------------------------------------------------------------------------------------
+
+  function renderConnection(t) {
+    const [text, kind] = {
+      connected: [`Connected as ${t.name || t.login}`, "good"],
+      connecting: [t.code ? "Waiting for You" : "Reconnecting", "warn"],
+    }[t.state] || ["Not Connected", ""];
+    const avatar = t.state === "connected" && t.avatar && t.avatar.startsWith("https://static-cdn.jtvnw.net/") ? t.avatar : "";
+    const pill = $("tw-conn-pill");
+    const key = `${text}|${avatar}`;
+    if (pill.dataset.key !== key) {   // rebuilt only on a change so the picture doesn't reload every poll
+      pill.dataset.key = key;
+      pill.textContent = "";
+      if (avatar) pill.append(el("img", { class: "avatar", src: avatar, alt: "", referrerpolicy: "no-referrer" }));
+      pill.append(el("span", { text }));
+    }
+    pill.className = "pill big " + kind + (avatar ? " has-avatar" : "");
+    const connect = $("tw-connect");
+    connect.hidden = t.state === "connected" || t.state === "connecting";
+    connect.disabled = !t.configured;
+    if (t.configured) connect.removeAttribute("data-tip"); else connect.dataset.tip = "No Twitch app is set up in this build yet";
+    $("tw-cancel").hidden = t.state !== "connecting";
+    $("tw-disconnect").hidden = t.state !== "connected";
+    const showDetail = t.detail && t.state === "disconnected";
+    $("tw-conn-detail").hidden = !showDetail;
+    $("tw-conn-detail").textContent = showDetail ? t.detail : "";
+    const box = $("tw-code-box");
+    box.hidden = !(t.state === "connecting" && t.code);
+    if (!box.hidden) {
+      $("tw-code").textContent = t.code;
+      const open = $("tw-open");
+      if (t.url && t.url.startsWith("https://")) { open.href = t.url; open.hidden = false; } else open.hidden = true;
+    }
+    if (lastConn !== "connected" && t.state === "connected") loadRewards();
+    if (lastConn === "connected" && t.state !== "connected") loadRewards();
+    lastConn = t.state;
+  }
+
+  // ---- rewards ------------------------------------------------------------------------------------------------
+
+  const rewardById = id => rewards.rewards.find(r => r.id === id);
+  const LOCKED_TIP = "Made on Twitch, not by this app. Twitch only lets the app that created a reward change it and see its redeems, so only rewards made here with New Reward can be used.";
+  const floatTip = $("tw-floattip");
+
+  function showTip(text) {   // sits under the whole menu so it never covers the next item
+    const box = $("tw-dd-menu").getBoundingClientRect();
+    floatTip.textContent = text;
+    floatTip.style.left = Math.max(8, Math.min(box.left, innerWidth - 296)) + "px";
+    floatTip.style.top = (box.bottom + 6) + "px";
+    floatTip.style.opacity = 1;
+  }
+  const hideTip = () => { floatTip.style.opacity = 0; };
+
+  function closeMenu() {
+    $("tw-dd-menu").hidden = true;
+    $("tw-dd-btn").setAttribute("aria-expanded", "false");
+    hideTip();
+  }
+
+  function renderMenu() {
+    const menu = $("tw-dd-menu");
+    const linked = snapshot.settings.redeems;
+    const available = rewards.rewards.filter(r => !linked.some(l => l.id === r.id));
+    menu.textContent = "";
+    if (!available.length) menu.append(el("div", { class: "dd-empty", text: "Nothing else to add yet." }));
+    for (const r of available) {
+      const item = el("button", { type: "button", role: "option", class: "dd-item" + (r.manageable ? "" : " locked") },
+        el("span", { text: r.title }), el("small", { text: r.manageable ? `${r.cost.toLocaleString()} points` : "Made on Twitch" }));
+      if (r.manageable) {
+        item.addEventListener("click", () => { closeMenu(); save({ redeems: [...snapshot.settings.redeems, { id: r.id, seconds: 120 }] }); });
+      } else {
+        item.setAttribute("aria-disabled", "true");
+        for (const type of ["mouseenter", "focus"]) item.addEventListener(type, () => showTip(LOCKED_TIP));
+        for (const type of ["mouseleave", "blur"]) item.addEventListener(type, hideTip);
+      }
+      menu.append(item);
+    }
+  }
+
+  function renderRewards() {
+    const linked = snapshot.settings.redeems;
+    const host = $("tw-rewards");
+    // Rebuilding on every poll would eat clicks, so only rebuild on a change.
+    const signature = JSON.stringify([linked, rewards]);
+    if (signature === rewardsSignature || host.contains(document.activeElement) && document.activeElement.tagName === "INPUT") return;
+    rewardsSignature = signature;
+    host.textContent = "";
+    const connected = rewards.connected;
+    if (!linked.length) host.append(el("div", { class: "empty", text: connected ? "No rewards added yet." : "Connect to Twitch to set up rewards." }));
+    for (const link of linked) {
+      const reward = rewardById(link.id);
+      const minutesInput = el("input", { type: "number", min: "0.5", step: "0.5", value: String(minutes(link.seconds)), "aria-label": "Minutes of chat control" });
+      minutesInput.addEventListener("change", () => {
+        const value = Number(minutesInput.value);
+        save({ redeems: linked.map(r => r.id === link.id ? { id: r.id, seconds: Math.round(value * 60) } : r) });
+      });
+      const edit = el("button", { type: "button", class: "btn tiny", text: "Edit" });
+      edit.disabled = !reward || !reward.manageable;
+      edit.addEventListener("click", () => openRewardDialog(reward));
+      const remove = el("button", { type: "button", class: "btn tiny", text: "Remove", "data-tip": "Stop using this reward for chat control", "data-tip-end": "" });
+      remove.addEventListener("click", () => save({ redeems: linked.filter(r => r.id !== link.id) }));
+      host.append(el("div", { class: "reward" + (reward ? "" : " missing") },
+        el("div", { class: "reward-main" }, el("div", { class: "reward-title", text: reward ? reward.title : "Unavailable" }),
+          el("div", { class: "reward-meta", text: reward ? `${reward.cost.toLocaleString()} points${reward.enabled ? "" : ", off"}`
+            : connected ? "Not found on Twitch" : "Not connected" })),
+        el("div", { class: "reward-controls" },
+          el("div", { class: "suffix", "data-tip": "How long chat gets control after a redeem" }, minutesInput, el("span", { text: "min" })), edit, remove)));
+    }
+    renderMenu();
+    $("tw-create").disabled = !connected;
+    $("tw-dd-btn").disabled = !connected;
+  }
+
+  async function loadRewards(manual = false) {
+    const { ok, data } = await api("/twitch/rewards");
+    if (ok) { rewards = data; if (snapshot) renderRewards(); }
+    else if (manual) toast(data.error || "Could not load rewards", true);
+  }
+
+  const dialog = $("tw-reward-dialog");
+  function openRewardDialog(reward) {
+    editing = reward ? reward.id : null;
+    $("tw-reward-heading").textContent = reward ? "Edit Reward" : "New Reward";
+    $("rw-save").textContent = reward ? "Save" : "Add";
+    $("rw-title").value = reward ? reward.title : "Chat Control";
+    $("rw-prompt").value = reward ? reward.prompt : "Lets chat control the game for a while.";
+    $("rw-cost").value = reward ? reward.cost : 1000;
+    $("rw-cooldown").value = reward ? reward.cooldown_seconds : 0;
+    $("rw-enabled").checked = !reward || reward.enabled;
+    $("rw-minutes").value = 2;
+    $("rw-minutes-field").hidden = !!reward;
+    $("rw-delete").hidden = !reward;
+    $("rw-error").textContent = "";
+    dialog.showModal();
+  }
+
+  async function saveReward() {
+    const fields = { title: $("rw-title").value, prompt: $("rw-prompt").value, cost: Number($("rw-cost").value),
+      cooldown_seconds: Number($("rw-cooldown").value), enabled: $("rw-enabled").checked };
+    const { ok, data } = editing
+      ? await api("/twitch/rewards/update", { id: editing, reward: fields })
+      : await api("/twitch/rewards/create", { reward: fields });
+    if (!ok) { $("rw-error").textContent = data.error || "Could not save"; return; }
+    if (!editing) {
+      const seconds = Math.round(Number($("rw-minutes").value) * 60);
+      await save({ redeems: [...snapshot.settings.redeems, { id: data.id, seconds }] });
+    }
+    dialog.close();
+    toast(editing ? "Reward updated." : "Reward created and added.");
+    await loadRewards();
+  }
+
+  async function deleteReward() {
+    if ($("rw-delete").dataset.sure !== "1") {
+      $("rw-delete").dataset.sure = "1";
+      $("rw-delete").textContent = "Click Again to Delete";
+      return;
+    }
+    const { ok, data } = await api("/twitch/rewards/delete", { id: editing });
+    if (!ok) { $("rw-error").textContent = data.error || "Could not delete"; return; }
+    dialog.close();
+    toast("Reward deleted.");
+    await loadRewards();
+    load(true);
+  }
+
+  // ---- rendering ----------------------------------------------------------------------------------------------
+
+  function renderSummary(s) {
+    const mode = s.settings.mode;
+    let text, kind;
+    if (mode === "off") [text, kind] = ["Off", "bad"];
+    else if (mode === "open") [text, kind] = [{ everyone: "Open to everyone", vips: "Open to VIPs", users: "Open to listed users" }[s.settings.who] || "Open", "good"];
+    else if (s.redeem_remaining_s > 0) [text, kind] = [`Chat in control, ${clock(s.redeem_remaining_s)} left`, "good"];
+    else [text, kind] = ["Waiting for a redeem", "warn"];
+    $("tw-pill").textContent = text;
+    $("tw-pill").className = "pill " + kind;
+    view.querySelectorAll("#tw-mode button").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
+    view.querySelectorAll("#tw-who button").forEach(b => b.classList.toggle("on", b.dataset.who === s.settings.who));
+    const banner = $("tw-banner");
+    banner.hidden = !s.save_error;
+    banner.textContent = s.save_error ? `Settings could not be saved: ${s.save_error}` : "";
+  }
+
+  function renderControls(s) {
+    const cfg = s.settings;
+    if (!groupsBuilt) { buildGroups(s.groups); buildAliasTargets(s.groups); }
+    renderAliases(cfg.custom_aliases);
+    if (document.activeElement !== $("tw-multi")) $("tw-multi").checked = !!cfg.multi_commands;
+    $("tw-multi-row").classList.toggle("off", !cfg.multi_commands);
+    if (document.activeElement !== $("tw-users")) $("tw-users").value = cfg.allowed_users.join(" ");
+    for (const g of s.groups) {
+      const box = view.querySelector(`input[data-group="${g.id}"]`);
+      if (document.activeElement !== box) box.checked = !!cfg.groups[g.id];
+      $(`tw-grp-${g.id}`).classList.toggle("off", !cfg.groups[g.id]);
+    }
+    view.querySelectorAll("button.chip[data-command]").forEach(chip => {
+      const off = cfg.disabled_commands.includes(chip.dataset.command);
+      chip.classList.toggle("disabled", off);
+      chip.setAttribute("aria-pressed", String(!off));
+    });
+    for (const spec of LIMITS) {
+      const slider = $(`tw-in-${spec.key}`), box = $(`tw-box-${spec.key}`);
+      if (document.activeElement !== slider && document.activeElement !== box) {
+        slider.value = cfg[spec.key];
+        box.value = cfg[spec.key];
+      }
+    }
+  }
+
+  function render(s) {
+    snapshot = s;
+    renderSummary(s);
+    renderControls(s);
+    renderConnection(s.twitch);
+    renderRewards();
+  }
+
+  async function load(force = false) {
+    if ((loading || pending) && !force) return;
+    loading = true;
+    const { ok, data } = await api("/twitch/state");
+    loading = false;
+    if (ok) render(data);
+    else $("tw-pill").textContent = data.error || "Chat control is not running";
+  }
+
+  function init() {
+    buildLimits();
+    view.querySelectorAll("#tw-mode button").forEach(b => b.addEventListener("click", () => save({ mode: b.dataset.mode })));
+    $("tw-multi").addEventListener("change", () => save({ multi_commands: $("tw-multi").checked }));
+    $("tw-alias-add").addEventListener("click", addAlias);
+    $("tw-alias-name").addEventListener("keydown", e => { if (e.key === "Enter") addAlias(); });
+    view.querySelectorAll("#tw-who button").forEach(b => b.addEventListener("click", () => save({ who: b.dataset.who })));
+    $("tw-users").addEventListener("change", () => {
+      const names = $("tw-users").value.split(/[\s,;]+/).filter(Boolean);
+      save({ allowed_users: names });
+    });
+    const connection = async path => {
+      const { ok, data } = await api(path, {});
+      if (!ok) toast(data.error || "Could not reach Twitch", true);
+      await load(true);
+    };
+    $("tw-connect").addEventListener("click", () => connection("/twitch/connect"));
+    $("tw-cancel").addEventListener("click", () => connection("/twitch/disconnect"));
+    $("tw-disconnect").addEventListener("click", () => connection("/twitch/disconnect"));
+    $("tw-dd-btn").addEventListener("click", async () => {
+      if (!$("tw-dd-menu").hidden) { closeMenu(); return; }
+      $("tw-dd-menu").hidden = false;
+      $("tw-dd-btn").setAttribute("aria-expanded", "true");
+      await loadRewards(true);   // the list is fetched again every time it opens
+    });
+    document.addEventListener("click", e => { if (!$("tw-dd").contains(e.target)) closeMenu(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+    $("tw-create").addEventListener("click", () => openRewardDialog(null));
+    $("rw-save").addEventListener("click", saveReward);
+    $("rw-close").addEventListener("click", () => dialog.close());
+    // A press outside the box (on the dimmed backdrop) closes it.
+    dialog.addEventListener("mousedown", e => {
+      const box = dialog.getBoundingClientRect();
+      if (e.target === dialog && (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom)) dialog.close();
+    });
+    $("rw-delete").addEventListener("click", deleteReward);
+    dialog.addEventListener("close", () => { $("rw-delete").dataset.sure = ""; $("rw-delete").textContent = "Delete Reward"; });
+  }
+
+  let timer = null;
+  window.twitchActivate = on => {
+    clearInterval(timer);
+    if (on) { loadRewards(); load(true); timer = setInterval(load, 400); }
+  };
+  init();
+})();
+</script>

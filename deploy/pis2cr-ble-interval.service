@@ -1,0 +1,12 @@
+[Unit]
+Description=Shorter BLE connection interval for the Pro Controller 2 link
+After=bluetooth.service
+Wants=bluetooth.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'for i in $$(seq 1 30); do [ -w /sys/kernel/debug/bluetooth/hci0/conn_min_interval ] && break; sleep 1; done; echo 6 > /sys/kernel/debug/bluetooth/hci0/conn_min_interval; echo 12 > /sys/kernel/debug/bluetooth/hci0/conn_max_interval'
+
+[Install]
+WantedBy=multi-user.target

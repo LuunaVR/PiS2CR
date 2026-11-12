@@ -1,0 +1,21 @@
+# Secrets and local config
+.env
+.env.*
+*.pem
+*.key
+id_*
+known_hosts
+PiS2CR-Data/
+
+# Personal tooling and editor files
+.github/copilot-instructions.md
+.idea/
+*.iml
+.vscode/
+
+# Build and generated output
+__pycache__/
+*.pyc
+launcher/dist/
+fun/ocarina/audio/
+fun/ocarina/out/

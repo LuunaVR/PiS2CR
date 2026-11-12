@@ -1,0 +1,157 @@
+<section id="debug-view" class="pane" hidden>
+  <div class="wrap">
+    <div class="cols">
+      <div class="col">
+        <section class="card">
+          <h3 data-tip="Check shows what would happen without pressing anything. Send to Game really presses it on the Switch 2.">Try a Message</h3>
+          <div class="row"><input type="text" id="dbg-test" maxlength="200" placeholder="left 1.5" autocomplete="off" spellcheck="false" aria-label="Message to try">
+            <button type="button" id="dbg-check" class="btn">Check</button>
+            <button type="button" id="dbg-send" class="btn primary">Send to Game</button></div>
+          <div id="dbg-verdict" class="verdict muted"></div>
+          <div class="examples" id="dbg-examples"></div>
+        </section>
+
+        <section class="card">
+          <h3 data-tip="Pretend a viewer redeemed one of your rewards. Nothing is sent to Twitch.">Test a Redeem</h3>
+          <div class="row">
+            <select id="dbg-reward" style="flex:1; min-width:180px; width:auto" aria-label="Reward to test"></select>
+            <button type="button" id="dbg-redeem" class="btn">Redeem</button>
+          </div>
+          <div id="dbg-redeem-verdict" class="verdict muted"></div>
+        </section>
+
+        <section class="card">
+          <div class="head" style="margin-bottom:12px"><h3>Right Now</h3><span id="dbg-counts" class="muted small"></span></div>
+          <div id="dbg-live"></div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="card">
+          <h3>Activity</h3>
+          <div id="dbg-log" class="log"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const EXAMPLES = ["a", "left 3", "f 1.5", "lb", "dl", "lookup .5", "zr"];
+  let snapshot = null, rewards = [], loading = false, rewardKey = "", timer = null;
+
+  function el(tag, attrs = {}, ...kids) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v; else if (k === "text") node.textContent = v; else node.setAttribute(k, v);
+    }
+    node.append(...kids);
+    return node;
+  }
+
+  async function api(path, body) {
+    try {
+      const res = await fetch(path, body === undefined ? { cache: "no-store" } :
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return { ok: res.ok, data: res.status === 204 ? {} : await res.json() };
+    } catch (e) {
+      return { ok: false, data: { error: "dashboard not reachable" } };
+    }
+  }
+
+  const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+  function renderLive(s) {
+    const host = $("dbg-live");
+    host.textContent = "";
+    if (!s.holds.length) host.append(el("div", { class: "empty", text: "Nothing is being held." }));
+    for (const h of s.holds) {
+      host.append(el("div", { class: "hold" },
+        el("div", { class: "hold-head" }, el("span", {}, el("code", { text: h.command }), ` from ${h.user}`),
+          el("span", { class: "muted", text: `${h.remaining_s.toFixed(1)} s` })),
+        el("div", { class: "bar" }, el("i", { style: `width:${Math.max(0, Math.min(100, 100 * h.remaining_s / h.seconds))}%` }))));
+    }
+    $("dbg-counts").textContent = `${s.stats.accepted} run, ${s.stats.ignored} ignored`;
+  }
+
+  function renderLog(s) {
+    const host = $("dbg-log");
+    host.textContent = "";
+    if (!s.log.length) host.append(el("div", { class: "empty", text: "Nothing yet." }));
+    for (const row of s.log) {
+      const when = new Date(row.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      host.append(el("div", { class: "log-row" },
+        el("span", { class: "t", text: when }), el("span", { class: "u", text: row.user }), el("span", { class: "m", text: row.text }),
+        el("span", { class: "badge " + (row.ok ? "good" : "bad"), text: row.reason })));
+    }
+  }
+
+  function renderRewardChoices(s) {
+    const linked = s.settings.redeems;
+    const key = JSON.stringify([linked, rewards]);
+    if (key === rewardKey || document.activeElement === $("dbg-reward")) return;
+    rewardKey = key;
+    const select = $("dbg-reward");
+    select.textContent = "";
+    for (const link of linked) {
+      const found = rewards.find(r => r.id === link.id);
+      select.append(el("option", { value: link.id, text: `${found ? found.title : "Reward"} (${clock(link.seconds)})` }));
+    }
+    if (!linked.length) select.append(el("option", { value: "", text: "No Rewards Set Up" }));
+    $("dbg-redeem").disabled = !linked.length;
+  }
+
+  async function load() {
+    if (loading) return;
+    loading = true;
+    const { ok, data } = await api("/twitch/state");
+    loading = false;
+    if (!ok) return;
+    snapshot = data;
+    renderLive(data);
+    renderLog(data);
+    renderRewardChoices(data);
+  }
+
+  async function check(run) {
+    const text = $("dbg-test").value;
+    const verdict = $("dbg-verdict");
+    if (!text.trim()) { verdict.className = "verdict muted"; verdict.textContent = "Type a message first."; return; }
+    const { ok, data } = await api("/twitch/test", { text, run });
+    verdict.className = "verdict " + (ok && data.ok ? "good" : "bad");
+    if (!ok) verdict.textContent = data.error || "Could not check";
+    else if (data.ok) verdict.textContent = run ? `Sent: ${data.reason}` : `OK. ${data.reason}`;
+    else verdict.textContent = `Ignored: ${data.reason}`;
+    load();
+  }
+
+  async function loadRewards() {
+    const { ok, data } = await api("/twitch/rewards");
+    if (ok) rewards = data.rewards;
+  }
+
+  $("dbg-check").addEventListener("click", () => check(false));
+  $("dbg-send").addEventListener("click", () => check(true));
+  $("dbg-test").addEventListener("keydown", e => { if (e.key === "Enter") check(false); });
+  for (const text of EXAMPLES) $("dbg-examples").append(el("button", { type: "button", class: "btn tiny", text }));
+  $("dbg-examples").addEventListener("click", e => {
+    if (e.target.tagName === "BUTTON") { $("dbg-test").value = e.target.textContent; check(false); }
+  });
+  $("dbg-redeem").addEventListener("click", async () => {
+    const verdict = $("dbg-redeem-verdict");
+    const { ok, data } = await api("/twitch/redeem", { reward_id: $("dbg-reward").value });
+    const accepted = ok && data.ok;
+    verdict.className = "verdict " + (accepted ? "good" : "bad");
+    verdict.textContent = !ok ? (data.error || "Could not test")
+      : accepted ? `Chat control started for ${clock(data.remaining_s)}` : `Denied: ${data.reason}`;
+    load();
+  });
+
+  window.debugActivate = on => {
+    clearInterval(timer);
+    if (on) { loadRewards().then(() => { rewardKey = ""; }); load(); timer = setInterval(load, 400); }
+  };
+})();
+</script>

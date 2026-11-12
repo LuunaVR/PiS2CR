@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pro Controller 2 overlay</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  [hidden] { display: none !important; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; visibility: hidden;
+    font-family: "Segoe UI", system-ui, Arial, sans-serif; color: var(--text, #fff); }
+  .widget { position: absolute; box-sizing: border-box; }
+
+  #w-controller #pad { display: block; width: 100%; height: 100%; transition: opacity .3s; }
+  #w-controller.idle #pad { opacity: .35; }
+
+  #list { position: absolute; inset: 0; display: flex; flex-direction: column; gap: .22em; overflow: hidden; }
+  .entry { display: inline-flex; align-items: baseline; gap: .35em; max-width: 100%; box-sizing: border-box; flex: none;
+    padding: .22em .7em .22em .6em; background: rgba(18, 19, 24, var(--hb, .78)); border-left: .22em solid var(--accent);
+    border-radius: .35em; color: var(--text); font-weight: 650; text-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: in .18s ease-out; transition: opacity .4s; }
+  .entry.streamer { --accent: var(--streamer); }
+  .entry.chat { --accent: var(--chat); }
+  .entry .who { font-size: .62em; font-weight: 600; color: var(--accent); margin-right: .3em; }
+  .entry.gone { opacity: 0; }
+  @keyframes in { from { opacity: 0; transform: translateY(var(--from, 8px)); } to { opacity: 1; transform: none; } }
+
+  #w-timer { display: grid; place-items: center; }
+  #card { min-width: 6em; padding: .25em .7em .3em; text-align: center; color: var(--text); background: rgba(18, 19, 24, var(--tb, .82));
+    border: .05em solid var(--accent); border-radius: .4em; text-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+    transition: opacity .35s, transform .35s; --accent: var(--chat); }
+  #card.hidden { opacity: 0; transform: translateY(-6px); }
+  #card.urgent { --accent: #ff6b7d; }
+  #label { font-size: .26em; font-weight: 700; letter-spacing: .14em; color: var(--accent); }
+  #time { font-size: 1em; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  #who { font-size: .24em; opacity: .75; min-height: 1.2em; }
+  #bar { height: .1em; margin-top: .2em; border-radius: .05em; background: rgba(255, 255, 255, .16); overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <section class="widget" id="w-controller" hidden>
+<!--PAD-->
+  </section>
+  <section class="widget" id="w-history" hidden><div id="list"></div></section>
+  <section class="widget" id="w-timer" hidden>
+    <div id="card" class="hidden">
+      <div id="label"></div>
+      <div id="time">0:00</div>
+      <div id="who"></div>
+      <div id="bar"><i></i></div>
+    </div>
+  </section>
+</div>
+<script>
+  // The layout and every option come from the dashboard's Overlays tab and change while this page is open.
+  // ?demo=1 fills the widgets with sample content for the dashboard's preview.
+  (() => {
+    const $ = id => document.getElementById(id);
+    const demo = new URLSearchParams(location.search).get("demo") === "1";
+    const stage = $("stage"), list = $("list"), card = $("card");
+    const STAGE_W = 1920, STAGE_H = 1080;
+    let cfg = null, applied = "", lastId = 0, endAt = 0, total = 0, by = null;
+    const entries = [];   // oldest first: { id, born, data, node }
+
+    function fit() {
+      const k = Math.min(innerWidth / STAGE_W, innerHeight / STAGE_H);
+      stage.style.transform = `translate(${(innerWidth - STAGE_W * k) / 2}px, ${(innerHeight - STAGE_H * k) / 2}px) scale(${k})`;
+    }
+    addEventListener("resize", fit);
+    fit();
+
+    const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const toHex = parts => "#" + parts.map(v => Math.round(v).toString(16).padStart(2, "0")).join("");
+    const mix = (hex, other, t) => { const a = rgb(hex), b = rgb(other); return toHex(a.map((v, i) => v + (b[i] - v) * t)); };
+    function setAccent(name, hex) {
+      const set = (suffix, value) => stage.style.setProperty(`--${name}${suffix}`, value);
+      set("", hex);
+      set("-glow", `rgba(${rgb(hex).join(",")}, .5)`);
+      set("-deep", mix(hex, "#000000", .18));
+      set("-edge", mix(hex, "#000000", .3));
+      stage.style.setProperty(name === "pink" ? "--soft-pink" : `--${name}-soft`, mix(hex, "#ffffff", .55));
+    }
+
+    function applySettings(next) {
+      const key = JSON.stringify(next);
+      if (!next || key === applied) return;
+      const namesChanged = !cfg || cfg.history.names !== next.history.names;
+      applied = key;
+      cfg = next;
+      for (const name of ["controller", "history", "timer"]) {
+        const box = $("w-" + name), c = next[name];
+        box.hidden = !c.visible;
+        Object.assign(box.style, { left: c.x + "%", top: c.y + "%", width: c.w + "%", height: c.h + "%", opacity: c.opacity / 100 });
+      }
+      setAccent("pink", next.colors.streamer);
+      setAccent("chat", next.colors.chat);
+      setAccent("merge", mix(next.colors.streamer, next.colors.chat, .5));
+      stage.style.setProperty("--streamer", next.colors.streamer);
+      stage.style.setProperty("--text", next.colors.text);
+      const h = next.history;
+      list.style.alignItems = { left: "flex-start", center: "center", right: "flex-end" }[h.align];
+      list.style.justifyContent = h.newest === "top" ? "flex-start" : "flex-end";
+      list.style.setProperty("--from", h.newest === "top" ? "-8px" : "8px");
+      stage.style.setProperty("--hb", h.backdrop / 100);
+      const t = next.timer;
+      stage.style.setProperty("--tb", t.backdrop / 100);
+      $("label").textContent = t.label;
+      $("label").hidden = !t.label;
+      $("bar").hidden = !t.bar;
+      $("who").hidden = !t.who;
+      if (namesChanged) entries.forEach(e => { if (e.node) { e.node.remove(); e.node = null; } });
+      stage.style.visibility = "visible";
+      fitText();
+      renderHistory();
+    }
+
+    // Text is sized from its box: the timer card fills the box, and the history's rows fill the box's height.
+    function fitText() {
+      const timer = $("w-timer"), t = cfg.timer, h = cfg.history;
+      timer.style.fontSize = "100px";
+      if (card.offsetWidth && card.offsetHeight) {
+        const k = Math.min(t.w / 100 * STAGE_W / card.offsetWidth, t.h / 100 * STAGE_H / card.offsetHeight);
+        timer.style.fontSize = Math.max(3, 100 * k) + "px";
+      }
+      list.style.fontSize = "100px";
+      const probe = document.createElement("div");
+      probe.className = "entry";
+      probe.textContent = "Ag";
+      list.append(probe);
+      const row = probe.offsetHeight / 100;   // in em
+      probe.remove();
+      if (row) list.style.fontSize = Math.max(3, (h.h / 100 * STAGE_H) / (h.count * row + (h.count - 1) * .22)) + "px";
+    }
+
+    // ---- history ------------------------------------------------------------------------------------------------
+    const visible = e => cfg && (e.data.source === "chat" ? cfg.history.chat : cfg.history.streamer)
+      && (e.data.kind !== "stick" || cfg.history.sticks);
+
+    function build(data) {
+      const node = document.createElement("div");
+      node.className = "entry " + data.source;
+      if (cfg.history.names && data.source === "chat" && data.user) {
+        const who = document.createElement("span");
+        who.className = "who";
+        who.textContent = data.user;
+        node.append(who);
+      }
+      node.append(document.createTextNode(data.text));
+      return node;
+    }
+
+    function renderHistory() {
+      if (!cfg) return;
+      const h = cfg.history, now = Date.now();
+      for (const e of entries) {
+        if (!e.expired && h.fade && now - e.born > h.fade * 1000) { e.expired = true; e.goneAt = now; }
+      }
+      // An expired entry stays just long enough to fade out.
+      const shown = entries.filter(e => visible(e) && (!e.expired || now - e.goneAt < 450)).slice(-h.count);
+      for (const e of entries) {
+        if (e.node && !shown.includes(e)) { e.node.remove(); e.node = null; }
+      }
+      const ordered = h.newest === "top" ? shown.slice().reverse() : shown;
+      ordered.forEach((e, index) => {
+        if (!e.node) e.node = build(e.data);
+        e.node.classList.toggle("gone", e.expired);
+        if (list.children[index] !== e.node) list.insertBefore(e.node, list.children[index] || null);
+      });
+      while (entries.length > 60) entries.shift();
+    }
+
+    // ---- timer --------------------------------------------------------------------------------------------------
+    function drawTimer() {
+      const left = Math.max(0, (endAt - Date.now()) / 1000);
+      const show = left > 0;
+      card.classList.toggle("hidden", !show);
+      card.classList.toggle("urgent", show && left <= 10);
+      if (!show) return;
+      const whole = Math.ceil(left);
+      $("time").textContent = `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+      $("who").textContent = by ? `redeemed by ${by}` : "";
+      $("bar").firstElementChild.style.width = (total > 0 ? Math.min(100, 100 * left / total) : 0) + "%";
+    }
+
+    // ---- data ---------------------------------------------------------------------------------------------------
+    async function poll() {
+      try {
+        const reply = await (await fetch(`/overlay/data?since=${demo ? 999999999 : lastId}`, { cache: "no-store" })).json();
+        applySettings(reply.settings);
+        if (!demo) {
+          const skew = Date.now() - reply.now * 1000;   // a late-loaded overlay still shows how old each entry is
+          for (const data of reply.events) {
+            entries.push({ id: data.id, data, born: data.t * 1000 + skew, node: null, expired: false });
+            lastId = data.id;
+          }
+          endAt = reply.timer.active ? Date.now() + reply.timer.remaining_s * 1000 : 0;
+          total = reply.timer.total_s;
+          by = reply.timer.redeemed_by;
+        }
+      } catch (e) { /* keep what is shown until the dashboard is reachable again */ }
+      renderHistory();
+    }
+    setInterval(poll, 200);
+    poll();
+    setInterval(drawTimer, 100);
+
+    const showOf = () => ({ streamer: cfg.controller.streamer, chat: cfg.controller.chat, colors: cfg.controller.tint });
+    if (demo) {
+      const samples = [["streamer", "button", "ZR + A"], ["chat", "command", "left 2s", "viewer12"], ["streamer", "button", "LB"],
+        ["chat", "command", "f", "Sam"], ["streamer", "button", "D-Pad \u2191"], ["chat", "command", "lookup 1.5s", "kiwi"],
+        ["streamer", "stick", "LS \u2191"]];
+      let n = 0;
+      const next = () => {
+        const [source, kind, text, user] = samples[n % samples.length];
+        n += 1;
+        entries.push({ id: -n, data: { id: -n, source, kind, text, user: user || null }, born: Date.now(), node: null, expired: false });
+        renderHistory();
+      };
+      for (let i = 0; i < 4; i++) next();
+      setInterval(next, 1100);
+      const restart = () => { endAt = Date.now() + 90000; total = 120; by = "viewer12"; };
+      restart();
+      setInterval(() => { if (Date.now() - endAt > 2500) restart(); }, 500);
+      let step = 0;
+      setInterval(() => {
+        if (!cfg) return;
+        step += 1;
+        drawPad({ connected: true, buttons: step % 4 === 0 ? ["A", "ZR"] : [], injected: [], chat_buttons: step % 4 === 1 ? ["UP"] : step % 4 === 2 ? ["ZL"] : [],
+          chat_sticks: step % 4 === 3 ? { right: [0.7, 0.7] } : {}, injected_sticks: {}, left: [2048, 2048], right: [2048, 2048] }, showOf());
+      }, 800);
+    } else {
+      startPolling(s => {
+        if (!cfg) return;
+        const live = s.connected || s.chat_buttons.length || Object.keys(s.chat_sticks).length;
+        $("w-controller").classList.toggle("idle", !live);
+        drawPad(s, showOf());
+      }, () => $("w-controller").classList.add("idle"));
+    }
+  })();
+</script>
+</body>
+</html>

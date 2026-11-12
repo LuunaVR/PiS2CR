@@ -1,0 +1,268 @@
+<section id="fun-view" class="pane" hidden>
+  <div class="wrap">
+    <section class="card">
+      <div class="head" style="margin-bottom:12px">
+        <h3 data-tip="A macro is a saved list of button and stick presses with exact timing, played by the Pi. While one plays, chat commands are paused.">Macros</h3>
+        <span id="fun-pill" class="pill">Loading</span>
+      </div>
+      <div id="fun-playing" class="fun-playing" hidden>
+        <button type="button" id="fun-back" class="btn" data-tip="Skip back 10 seconds">-10 s</button>
+        <input type="range" id="fun-seek" min="0" max="1000" step="1" value="0" aria-label="Position in the macro" data-tip="Click or drag to jump to any point. The ocarina stays out; the song carries on from there.">
+        <button type="button" id="fun-fwd" class="btn" data-tip="Skip ahead 10 seconds">+10 s</button>
+        <span id="fun-time" class="small"></span>
+        <button type="button" id="fun-stop" class="btn danger">Stop</button>
+      </div>
+      <div id="fun-list"></div>
+      <div id="fun-error" class="fun-error"></div>
+    </section>
+
+    <section class="card">
+      <div class="head" style="margin-bottom:12px">
+        <h3 data-tip="Chat can start a macro by using its keyword anywhere in a message, like roll in 'lets roll'. It follows the same rules as chat commands: chat control must be open (or a redeem running) and the sender must be allowed. Only one macro runs at a time.">Chat Triggers</h3>
+      </div>
+      <div class="grp" style="border-top:0; padding-top:0">
+        <label class="switch"><input type="checkbox" id="fun-chat" aria-label="Let Chat Start Macros"><span></span></label>
+        <div class="grp-body"><div class="grp-title" data-tip="Off by default. Turn this on only when the game is ready for the macro to run.">Let Chat Start Macros</div></div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <div class="slider-head"><span data-tip="Seconds before chat can start any macro again, counted from when the last one started.">Cooldown</span></div>
+        <div class="limit"><input type="range" id="fun-cd-range" min="0" max="600" step="5" aria-label="Cooldown"><input type="number" id="fun-cd" min="0" max="3600" step="any" aria-label="Cooldown value"><span class="unit">s</span></div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="fun-word" data-tip="The keyword, letters only. Chat can say it anywhere in a message as a whole word. It cannot be a command or a custom name.">Words</label>
+        <div class="alias-row">
+          <input type="text" id="fun-word" maxlength="20" placeholder="roll" autocomplete="off" spellcheck="false" aria-label="Word chat types">
+          <select id="fun-macro" aria-label="Macro to start"></select>
+          <button type="button" id="fun-add" class="btn primary">Add</button>
+        </div>
+        <div id="fun-words" class="chips"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary style="cursor:pointer; font-weight:600">Import A Macro</summary>
+        <div class="field" style="margin-top:14px"><label for="fun-name" data-tip="Lowercase letters, numbers, - or _, starting with a letter. Using an existing name replaces that macro.">Name</label>
+          <input type="text" id="fun-name" maxlength="32" placeholder="roll" autocomplete="off" spellcheck="false"></div>
+        <div class="field"><label for="fun-label">Label</label>
+          <input type="text" id="fun-label" maxlength="40" placeholder="Rickroll" autocomplete="off"></div>
+        <div class="field"><label for="fun-json" data-tip="A macro is {&quot;steps&quot;: [{&quot;t&quot;: seconds, &quot;buttons&quot;: [names], &quot;left&quot;: [x, y]}, ...]}. Each step is held from its time on. The last step must release everything.">Macro JSON</label>
+          <textarea id="fun-json" rows="5" spellcheck="false" placeholder='{"steps": [{"t": 0, "buttons": ["A"]}, {"t": 0.3, "buttons": []}]}'></textarea></div>
+        <button type="button" id="fun-import" class="btn primary">Import</button>
+      </details>
+    </section>
+  </div>
+</section>
+
+<style>
+  #fun-view .fun-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+  #fun-view .fun-row:first-child { border-top: 0; padding-top: 2px; }
+  #fun-view .fun-row .info { flex: 1; min-width: 0; }
+  #fun-view .fun-row .name { font-weight: 600; }
+  #fun-view .fun-row.live .name { color: var(--accent); }
+  #fun-view .fun-playing { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  #fun-view .fun-playing input[type=range] { flex: 1; min-width: 80px; }
+  #fun-view .fun-playing .small { min-width: 86px; text-align: center; }
+  #fun-view .fun-speed { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  #fun-view .fun-speed input[type=range] { flex: 1; max-width: 260px; }
+  #fun-view .fun-speed input[type=number] { width: 84px; }
+  #fun-view .fun-error { color: var(--bad); font-weight: 600; min-height: 0; margin-top: 8px; }
+  #fun-view .empty { color: var(--muted); }
+  #fun-view details summary { color: var(--text); }
+</style>
+
+<script>
+(() => {
+  const view = document.getElementById("fun-view");
+  const $ = id => document.getElementById(id);
+  let macroState = { macros: [], playing: null, elapsed: 0, duration: 0 }, chatState = null, timer = null, busy = false;
+  let listKey = "", wordKey = "", sureName = "", scrubbing = false;
+
+  function el(tag, attrs = {}, ...kids) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v; else if (k === "text") node.textContent = v; else node.setAttribute(k, v);
+    }
+    node.append(...kids);
+    return node;
+  }
+
+  async function api(path, body) {
+    try {
+      const res = await fetch(path, body === undefined ? { cache: "no-store" } :
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return { ok: res.ok, data: res.status === 204 ? {} : await res.json() };
+    } catch (e) {
+      return { ok: false, data: { error: "dashboard not reachable" } };
+    }
+  }
+
+  const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const showError = message => { $("fun-error").textContent = message || ""; };
+
+  async function load() {
+    if (busy) return;
+    const [macros, chat] = await Promise.all([api("/macro/state"), api("/twitch/state")]);
+    if (macros.ok) macroState = macros.data;
+    if (chat.ok) chatState = chat.data;
+    render();
+  }
+
+  function speedControl(m) {
+    const percent = Math.round(m.speed * 100);
+    const slider = el("input", { type: "range", min: "50", max: "400", step: "5", "aria-label": `Speed of ${m.name}` });
+    const box = el("input", { type: "number", min: "50", max: "400", step: "any", "aria-label": `Speed of ${m.name} in percent` });
+    slider.value = box.value = percent;
+    slider.addEventListener("input", () => { box.value = slider.value; });
+    slider.addEventListener("change", () => act("/macro/speed", { name: m.name, speed: Number(slider.value) / 100 }));
+    box.addEventListener("input", () => { if (box.value !== "") slider.value = box.value; });
+    box.addEventListener("change", () => {
+      const value = Number(box.value);
+      if (box.value === "" || !Number.isFinite(value)) { box.value = percent; return; }
+      act("/macro/speed", { name: m.name, speed: value / 100 });
+    });
+    return el("div", { class: "fun-speed" },
+      el("span", { class: "small", text: "Speed", "data-tip": "How fast this macro plays: 100% is as recorded, 50% half speed, 400% four times faster. Pitches stay the same. Waits the macro marks as the game's own (like taking the ocarina out) are not sped up." }),
+      slider, box, el("span", { class: "unit", text: "%" }));
+  }
+
+  function renderList() {
+    const playing = macroState.playing;
+    const key = JSON.stringify([macroState.macros, playing, sureName]);
+    if (key !== listKey) {
+      listKey = key;
+      const host = $("fun-list");
+      host.textContent = "";
+      if (!macroState.macros.length) host.append(el("div", { class: "empty", text: "No macros yet. Import one below." }));
+      for (const m of macroState.macros) {
+        const play = el("button", { type: "button", class: "btn", text: "Play" });
+        play.disabled = !!playing;
+        play.addEventListener("click", () => act("/macro/play", { name: m.name }));
+        const remove = el("button", { type: "button", class: "btn danger tiny", text: sureName === m.name ? "Sure?" : "Delete" });
+        remove.addEventListener("click", () => {
+          if (sureName === m.name) { sureName = ""; act("/macro/delete", { name: m.name }); } else { sureName = m.name; listKey = ""; render(); }
+        });
+        host.append(el("div", { class: "fun-row" + (playing === m.name ? " live" : "") },
+          el("div", { class: "info" }, el("div", { class: "name", text: m.name }),
+            el("div", { class: "muted small", text: `${m.label ? m.label + " - " : ""}plays in ${clock(m.play_time)}, ${m.steps} steps` }),
+            speedControl(m)),
+          play, remove));
+      }
+    }
+    $("fun-playing").hidden = !playing;
+    if (!playing) scrubbing = false;    if (playing && !scrubbing) {
+      $("fun-seek").value = Math.round(1000 * macroState.elapsed / Math.max(0.1, macroState.duration));
+      $("fun-time").textContent = `${clock(macroState.elapsed)} / ${clock(macroState.duration)}`;
+    }
+    const pill = $("fun-pill");
+    pill.textContent = playing ? `Playing ${playing}, ${clock(macroState.elapsed)} of ${clock(macroState.duration)}` : "Nothing Playing";
+    pill.className = "pill " + (playing ? "good" : "warn");
+  }
+
+  function renderTriggers() {
+    if (!chatState) return;
+    const cfg = chatState.settings;
+    if (document.activeElement !== $("fun-chat")) $("fun-chat").checked = !!cfg.macro_chat;
+    const cd = $("fun-cd"), range = $("fun-cd-range");
+    if (document.activeElement !== cd && document.activeElement !== range) { cd.value = cfg.macro_cooldown_seconds; range.value = cfg.macro_cooldown_seconds; }
+    const select = $("fun-macro"), names = macroState.macros.map(m => m.name);
+    const key = JSON.stringify([cfg.macro_triggers, names]);
+    if (key === wordKey) return;
+    wordKey = key;
+    if (document.activeElement !== select) {
+      const keep = select.value;
+      select.textContent = "";
+      for (const name of names) select.append(el("option", { value: name, text: name }));
+      if (!names.length) select.append(el("option", { value: "", text: "No Macros Yet" }));
+      if (names.includes(keep)) select.value = keep;
+    }
+    $("fun-add").disabled = !names.length;
+    const host = $("fun-words");
+    host.textContent = "";
+    for (const word of Object.keys(cfg.macro_triggers).sort()) {
+      const remove = el("button", { type: "button", "aria-label": `Remove ${word}`, text: "\u2715" });
+      remove.addEventListener("click", () => {
+        const next = { ...chatState.settings.macro_triggers };
+        delete next[word];
+        saveChat({ macro_triggers: next });
+      });
+      host.append(el("span", { class: "chip custom" }, word, el("i", { text: ` = ${cfg.macro_triggers[word]}` }), remove));
+    }
+  }
+
+  function render() { renderList(); renderTriggers(); }
+
+  async function act(path, body) {
+    busy = true;
+    showError("");
+    const { ok, data } = await api(path, body);
+    busy = false;
+    if (!ok) showError(data.error || "That did not work");
+    else if (data.started === false) showError("Another macro is still playing.");
+    else if (data.macros) macroState = data;
+    listKey = "";
+    await load();
+    return ok;
+  }
+
+  async function saveChat(settings) {
+    showError("");
+    const { ok, data } = await api("/twitch/settings", { settings });
+    if (!ok) showError(data.error || "Could not save");
+    wordKey = "";
+    await load();
+    return ok;
+  }
+
+  function init() {
+    $("fun-stop").addEventListener("click", () => act("/macro/stop", {}));
+    const seekBar = $("fun-seek");
+    const seekTo = async seconds => {
+      const position = Math.max(0, Math.min(macroState.duration, seconds));
+      const { ok, data } = await api("/macro/seek", { position });
+      scrubbing = false;
+      showError(ok ? "" : data.error || "That did not work");
+      if (ok) macroState = { ...data, elapsed: position };   // the reply is taken before the player has jumped
+      render();
+    };
+    seekBar.addEventListener("pointerdown", () => { scrubbing = true; });
+    seekBar.addEventListener("input", () => {
+      scrubbing = true;
+      $("fun-time").textContent = `${clock(seekBar.value / 1000 * macroState.duration)} / ${clock(macroState.duration)}`;
+    });
+    seekBar.addEventListener("change", () => seekTo(seekBar.value / 1000 * macroState.duration));
+    $("fun-back").addEventListener("click", () => seekTo(macroState.elapsed - 10));
+    $("fun-fwd").addEventListener("click", () => seekTo(macroState.elapsed + 10));
+    $("fun-chat").addEventListener("change", () => saveChat({ macro_chat: $("fun-chat").checked }));
+    const range = $("fun-cd-range"), box = $("fun-cd");
+    range.addEventListener("input", () => { box.value = range.value; });
+    range.addEventListener("change", () => saveChat({ macro_cooldown_seconds: Number(range.value) }));
+    box.addEventListener("input", () => { if (box.value !== "") range.value = box.value; });
+    box.addEventListener("change", () => {
+      if (box.value === "" || !Number.isFinite(Number(box.value))) { box.value = chatState.settings.macro_cooldown_seconds; return; }
+      saveChat({ macro_cooldown_seconds: Number(box.value) });
+    });
+    const addWord = async () => {
+      const word = $("fun-word").value.trim().toLowerCase(), macro = $("fun-macro").value;
+      if (!word || !macro) return;
+      if (await saveChat({ macro_triggers: { ...chatState.settings.macro_triggers, [word]: macro } })) $("fun-word").value = "";
+    };
+    $("fun-add").addEventListener("click", addWord);
+    $("fun-word").addEventListener("keydown", e => { if (e.key === "Enter") addWord(); });
+    $("fun-import").addEventListener("click", async () => {
+      let macro;
+      try { macro = JSON.parse($("fun-json").value); } catch (e) { showError("That is not valid JSON."); return; }
+      if (macro && typeof macro === "object" && !Array.isArray(macro) && $("fun-label").value.trim()) macro.label = $("fun-label").value.trim();
+      if (await act("/macro/save", { name: $("fun-name").value.trim(), macro })) { $("fun-json").value = ""; $("fun-name").value = ""; $("fun-label").value = ""; }
+    });
+  }
+  init();
+
+  window.funActivate = on => {
+    clearInterval(timer);
+    if (!on) return;
+    load();
+    timer = setInterval(load, 500);
+  };
+})();
+</script>

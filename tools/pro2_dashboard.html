@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pro Controller 2</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  [hidden] { display: none !important; }
+  body { display: flex; flex-direction: column; overflow: hidden; background: #14161a; color: #e8e8e8; font-family: Segoe UI, Arial, sans-serif; font-size: 15px; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; padding: 8px 16px; border-bottom: 1px solid #2a2d33; }
+  #links { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .link { padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #fff; }
+  .link.ok { background: #9146ff; }
+  .link.wait { background: #c93a4e; }
+  #battery { margin-top: auto; padding-top: 16px; width: max-content; }
+  #battery svg { display: block; }
+  .tabs { display: flex; gap: 4px; align-self: center; }
+  .tab { background: transparent; color: #9a9a9a; border: 1px solid transparent; border-radius: 8px; padding: 4px 14px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .tab:hover { color: #e8e8e8; }
+  .tab.active { background: rgba(145, 70, 255, .2); color: #bf94ff; border-color: rgba(145, 70, 255, .65); }
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 230px minmax(0, 1fr) 150px; grid-template-areas: "motion pad log"; gap: 16px; align-items: center; padding: 8px 16px; }
+  #center { grid-area: pad; align-self: stretch; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; }
+  #pad { width: 100%; height: 100%; min-height: 0; }
+  #extras { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+  .extra { font: 600 13px system-ui, sans-serif; color: #e8e8e8; background: #34323a; border: 1px solid #5c5863; border-radius: 6px; padding: 4px 12px; cursor: pointer; touch-action: none; user-select: none; }
+  .extra:hover { border-color: #bf94ff; }
+  .extra.pressed { background: #efa3cb; color: #312732; border-color: #ffd3e9; }
+  .extra.pressed.chat { background: #a98bff; border-color: #d9ccff; }
+  h3 { margin: 0 0 6px; font-size: 13px; color: #9a9a9a; font-weight: 600; }
+  #motion { grid-area: motion; align-self: stretch; display: flex; flex-direction: column; }
+  #log { grid-area: log; align-self: start; }
+  #motionmsg { color: #ff6b6b; }
+  .mrow { display: grid; grid-template-columns: 10px 1fr 5ch 5ch; gap: 8px; align-items: center; margin: 4px 0; font-family: Consolas, monospace; }
+  .mrow.head { color: #9a9a9a; font-size: 12px; margin-bottom: 0; }
+  .mrow b { color: #9a9a9a; font-weight: normal; }
+  .num { text-align: right; }
+  .track { position: relative; height: 12px; background: #1d2025; border-radius: 3px; }
+  .track::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #444; }
+  .arrow { position: absolute; top: 2px; height: 8px; background: #bf94ff; }
+  .arrow.pos { clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 0 100%); }
+  .arrow.neg { clip-path: polygon(6px 0, 100% 0, 100% 100%, 6px 100%, 0 50%); }
+  #history { height: calc(8 * 1.7em); overflow: hidden; }
+  .hrow { border-left: 3px solid #efa3cb; padding-left: 7px; margin-bottom: 3px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hrow.chat { border-left-color: #a98bff; }
+  .hrow .who { color: #a98bff; font-size: 12px; margin-right: 7px; }
+  [data-tip]:not([data-tip=""]) { position: relative; cursor: help; }
+  [data-tip]:not([data-tip=""])::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); z-index: 70; width: max-content; max-width: 280px; box-sizing: border-box; padding: 7px 10px; border-radius: 8px; background: #2a2236; border: 1px solid #5b3f94; color: #eceaf0; font: 400 13px/1.4 Segoe UI, Arial, sans-serif; letter-spacing: 0; text-transform: none; text-align: left; white-space: normal; opacity: 0; pointer-events: none; transition: opacity .12s; }
+  [data-tip][data-tip-end]::after { left: auto; right: 0; }
+  [data-tip]:not([data-tip=""]):hover::after { opacity: 1; transition-delay: .3s; }
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    main { grid-template-columns: 1fr 1fr; grid-template-areas: "pad pad" "motion log"; align-items: start; align-content: start; }
+    #pad { height: auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav class="tabs">
+    <button class="tab active" data-view="controller">Controller</button>
+    <button class="tab" data-view="twitch">Twitch</button>
+    <button class="tab" data-view="overlays">Overlays</button>
+    <button class="tab" data-view="fun">Fun</button>
+    <button class="tab" data-view="debug">Debug</button>
+  </nav>
+  <div id="links">
+    <span id="status" class="link wait" data-tip-end>Controller: Waiting</span>
+    <span id="switchlink" class="link wait">Switch 2: Waiting</span>
+  </div>
+</header>
+<main id="controller-view">
+  <section id="motion">
+    <h3>Motion</h3>
+    <div id="motionmsg"></div>
+    <div class="mrow head"><span></span><span></span><span class="num">Gyro</span><span class="num">Accel</span></div>
+    <div class="mrow"><b>X</b><div class="track"><div class="arrow"></div></div><span class="num g"></span><span class="num a"></span></div>
+    <div class="mrow"><b>Y</b><div class="track"><div class="arrow"></div></div><span class="num g"></span><span class="num a"></span></div>
+    <div class="mrow"><b>Z</b><div class="track"><div class="arrow"></div></div><span class="num g"></span><span class="num a"></span></div>
+    <div id="battery" data-tip="" hidden>
+      <svg viewBox="0 0 80 36" width="80" height="36" role="img" aria-label="Controller battery">
+        <rect x="1.5" y="1.5" width="69" height="33" rx="9" fill="#1c1a22" stroke="#6f6b7a" stroke-width="3"/>
+        <rect x="73" y="12" width="6" height="12" rx="3" fill="#6f6b7a"/>
+        <rect id="bat-fill" x="6" y="6" width="59" height="24" rx="5" fill="#9146ff"/>
+        <path id="bat-bolt" d="M39.5 6 L26.5 20 H34.5 L31.5 31 L45.5 16 H37.5 Z" fill="#fff" stroke-linejoin="round" hidden/>
+      </svg>
+    </div>
+  </section>
+  <div id="center">
+<!--PAD-->
+    <div id="extras">
+      <button class="extra" data-b="ZL">ZL</button>
+      <button class="extra" data-b="ZR">ZR</button>
+      <button class="extra" data-b="GL">GL</button>
+      <button class="extra" data-b="GR">GR</button>
+      <button class="extra" data-b="LS">LS Click</button>
+      <button class="extra" data-b="RS">RS Click</button>
+    </div>
+  </div>
+  <section id="log">
+    <h3>History</h3>
+    <div id="history"></div>
+  </section>
+</main>
+<!--TWITCH-->
+<!--OVERLAYS-->
+<!--FUN-->
+<!--DEBUG-->
+<script>
+  const whole = v => Math.round(v);
+  const GYRO_FULL_DPS = 500;
+  const AVG_FRAMES = 10;
+  const motionWindow = [];
+
+  // Mean of the last AVG_FRAMES frames (a third of a second at 30 frames/s): gyro xyz then accel xyz.
+  function averageMotion(s) {
+    motionWindow.push([...s.gyro_dps, ...s.accel_g]);
+    if (motionWindow.length > AVG_FRAMES) motionWindow.shift();
+    return motionWindow[0].map((_, i) => motionWindow.reduce((sum, f) => sum + f[i], 0) / motionWindow.length);
+  }
+
+  // Square-root scale so slow turns still show a visible arrow; length grows with speed.
+  function drawGyro(m) {
+    document.querySelectorAll("#motion .arrow").forEach((arrow, i) => {
+      const v = m ? m[i] : 0;
+      const half = Math.sqrt(Math.min(1, Math.abs(v) / GYRO_FULL_DPS)) * 50;
+      arrow.style.display = Math.abs(v) < 2 ? "none" : "block";
+      arrow.className = "arrow " + (v >= 0 ? "pos" : "neg");
+      arrow.style.width = half + "%";
+      arrow.style.left = (v >= 0 ? 50 : 50 - half) + "%";
+    });
+  }
+
+  function draw(s) {
+    drawPad(s);
+    renderHistory(s.history);
+    const m = s.connected && s.gyro_dps ? averageMotion(s) : null;
+    if (!m) motionWindow.length = 0;
+    drawGyro(m);
+    drawMotion(s, m);
+    const status = document.getElementById("status");
+    status.textContent = "Controller: " + (s.connected ? "Connected" : "Waiting");
+    status.className = "link " + (s.connected ? "ok" : "wait");
+    status.dataset.tip = s.connected ? whole(s.rate) + " reports per second" : "";
+    const link = document.getElementById("switchlink");
+    link.textContent = "Switch 2: " + (s.switch === "connected" ? "Connected" : "Waiting");
+    link.className = "link " + (s.switch === "connected" ? "ok" : "wait");
+    drawBattery(s);
+  }
+
+  // The level fills the battery, red when nearly empty; while charging it is solid with a bolt.
+  function drawBattery(s) {
+    document.getElementById("battery").hidden = !s.connected;
+    const charging = s.charging || s.external_power;
+    const fill = document.getElementById("bat-fill");
+    fill.setAttribute("width", charging ? 59 : Math.max(6, 59 * Math.min(100, s.battery_pct) / 100));
+    fill.setAttribute("fill", !charging && s.battery_pct <= 20 ? "#ff5a6e" : "#9146ff");
+    document.getElementById("bat-bolt").hidden = !charging;
+    document.getElementById("battery").dataset.tip = `${s.battery_pct}%` + (charging ? ", charging" : "");
+  }
+
+  // Last 10 displayed gyro values per axis; a number stays white unless it changed noticeably over them.
+  const gyroHistory = [[], [], []];
+  const STILL_DPS = 10;
+  const WHITE = [232, 232, 232], FAST = [191, 148, 255];
+
+  function gyroColor(axis, v) {
+    const h = gyroHistory[axis];
+    h.push(v);
+    if (h.length > 10) h.shift();
+    if (Math.max(...h) - Math.min(...h) < STILL_DPS) return "";
+    const t = Math.sqrt(Math.min(1, Math.abs(v) / GYRO_FULL_DPS));
+    return `rgb(${WHITE.map((w, k) => Math.round(w + (FAST[k] - w) * t)).join(",")})`;
+  }
+
+  function drawMotion(s, m) {
+    const message = document.getElementById("motionmsg");
+    const gyroCells = document.querySelectorAll("#motion .num.g");
+    const accelCells = document.querySelectorAll("#motion .num.a");
+    if (m) {
+      message.textContent = "";
+      m.slice(0, 3).map(whole).forEach((v, i) => {
+        gyroCells[i].textContent = v;
+        gyroCells[i].style.color = gyroColor(i, v);
+      });
+      m.slice(3).forEach((v, i) => { accelCells[i].textContent = whole(v * 100); });
+      return;
+    }
+    gyroHistory.forEach(h => { h.length = 0; });
+    [...gyroCells, ...accelCells].forEach(cell => { cell.textContent = ""; cell.style.color = ""; });
+    message.textContent = !s.connected ? "" : (s.motion_present ? "not decoded" : "no motion data");
+  }
+
+  // History comes from the relay so chat's commands are in it too. Stick directions are left for the overlay.
+  let historyKey = "";
+  function renderHistory(events) {
+    const key = events.map(e => e.id).join(",");
+    if (key === historyKey) return;
+    historyKey = key;
+    const host = document.getElementById("history");
+    host.textContent = "";
+    for (const e of events.filter(e => e.kind !== "stick").reverse()) {
+      const row = document.createElement("div");
+      row.className = "hrow " + e.source;
+      if (e.source === "chat" && e.user) {
+        const who = document.createElement("span");
+        who.className = "who";
+        who.textContent = e.user;
+        row.append(who);
+      }
+      row.append(document.createTextNode(e.text));
+      host.append(row);
+    }
+  }
+
+  async function post(path, body) {
+    try {
+      await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    } catch (e) { /* the status line already shows when the dashboard is unreachable */ }
+  }
+  const press = (name, down) => post("/press", { button: name, down });
+
+  // The relay releases a held button or stick after 1.5 s without a refresh, so keep refreshing while it is held.
+  const held = {};
+  function startHold(name) {
+    if (held[name]) return;
+    press(name, true);
+    held[name] = setInterval(() => press(name, true), 500);
+  }
+  function endHold(name) {
+    if (!held[name]) return;
+    clearInterval(held[name]);
+    delete held[name];
+    press(name, false);
+  }
+
+  const aim = {};
+  const sendStick = (side, active) => post("/stick", { stick: side, x: aim[side][0], y: aim[side][1], active });
+  function startDrag(side, stick, e) {
+    e.preventDefault();
+    stick.setPointerCapture(e.pointerId);
+    aim[side] = [0, 0];
+    dragging[side] = setInterval(() => sendStick(side, true), 100);
+    moveDrag(side, e);
+  }
+  function moveDrag(side, e) {
+    if (!dragging[side]) return;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(document.getElementById("pad").getScreenCTM().inverse());
+    let x = (p.x - STICKS[side].cx) / DRAG_RADIUS, y = -(p.y - STICKS[side].cy) / DRAG_RADIUS;
+    const length = Math.hypot(x, y);
+    if (length > 1) { x /= length; y /= length; }
+    aim[side] = [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000];
+    placeCap(side, aim[side][0], aim[side][1]);
+  }
+  function endDrag(side) {
+    if (!dragging[side]) return;
+    clearInterval(dragging[side]);
+    delete dragging[side];
+    sendStick(side, false);
+  }
+  window.addEventListener("blur", () => {
+    Object.keys(held).forEach(endHold);
+    Object.keys(dragging).forEach(endDrag);
+  });
+
+  let wired = false;
+  function wire(injectable) {
+    if (wired || !injectable.length) return;
+    wired = true;
+    document.querySelectorAll("[data-b]").forEach(el => {
+      const name = el.dataset.b;
+      if (!injectable.includes(name)) return;
+      el.addEventListener("pointerdown", e => { e.preventDefault(); el.setPointerCapture(e.pointerId); startHold(name); });
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => el.addEventListener(t, () => endHold(name)));
+    });
+    for (const side of ["left", "right"]) {
+      const stick = document.getElementById(STICKS[side].group);
+      stick.addEventListener("pointerdown", e => startDrag(side, stick, e));
+      stick.addEventListener("pointermove", e => moveDrag(side, e));
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => stick.addEventListener(t, () => endDrag(side)));
+    }
+  }
+
+  startPolling(s => { wire(s.injectable); draw(s); },
+               () => { document.getElementById("status").textContent = "Controller: Unreachable"; });
+
+  function showView(name) {
+    document.getElementById("controller-view").hidden = name !== "controller";
+    document.getElementById("twitch-view").hidden = name !== "twitch";
+    document.getElementById("overlays-view").hidden = name !== "overlays";
+    document.getElementById("fun-view").hidden = name !== "fun";
+    document.getElementById("debug-view").hidden = name !== "debug";
+    document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === name));
+    window.location.hash = name === "controller" ? "" : name;
+    window.twitchActivate(name === "twitch");
+    window.overlaysActivate(name === "overlays");
+    window.funActivate(name === "fun");
+    window.debugActivate(name === "debug");
+  }
+  document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => showView(tab.dataset.view)));
+  if (["#twitch", "#overlays", "#fun", "#debug"].includes(window.location.hash)) showView(window.location.hash.slice(1));
+</script>
+</body>
+</html>

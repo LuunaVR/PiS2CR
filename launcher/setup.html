@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PiS2CR Setup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#14161a; --card:#1c1f26; --text:#eceaf0; --muted:#a8a6b4; --purple:#9146ff; --red:#e0546a; --gray:#3a3e48; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:20px/1.5 "Segoe UI", system-ui, sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:28px 20px 80px; }
+  h1 { font-size:34px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  section { background:var(--card); border:2px solid var(--gray); border-radius:12px; padding:18px 22px; margin-bottom:18px; }
+  section.active { border-color:var(--purple); }
+  section.done h2::after { content:" - Done"; color:var(--purple); }
+  section.locked { opacity:.55; }
+  h2 { font-size:24px; margin:0 0 8px; }
+  p { margin:6px 0; }
+  .muted { color:var(--muted); }
+  label { display:block; margin:12px 0 4px; font-weight:600; }
+  input { width:100%; padding:10px 12px; font:inherit; color:var(--text); background:#101216; border:2px solid var(--gray); border-radius:8px; }
+  input:focus { outline:none; border-color:var(--purple); }
+  .row { display:flex; gap:14px; flex-wrap:wrap; }
+  .row > div { flex:1 1 240px; }
+  button { font:inherit; font-weight:700; color:#fff; background:var(--purple); border:0; border-radius:8px; padding:10px 20px; margin:14px 12px 0 0; cursor:pointer; position:relative; }
+  button.gray { background:var(--gray); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button[data-tip]:hover::after { content:attr(data-tip); position:absolute; left:0; top:105%; z-index:5; width:300px; padding:8px 10px; background:#000; color:var(--text); font-weight:400; font-size:17px; border:1px solid var(--gray); border-radius:6px; }
+  .pis { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  .pis button { margin:0; background:var(--gray); }
+  .pis button.pi { background:var(--purple); }
+  .error { color:var(--red); font-weight:700; margin-top:12px; }
+  .hint { color:var(--text); font-weight:600; margin-top:12px; }
+  .bar { height:16px; background:#101216; border-radius:8px; overflow:hidden; margin-top:12px; }
+  .bar > div { height:100%; background:var(--purple); width:0; transition:width .3s; }
+  details { margin-top:12px; }
+  summary { cursor:pointer; color:var(--muted); }
+  pre { margin:8px 0 0; max-height:260px; overflow:auto; background:#0b0c0f; padding:10px; border-radius:8px; font:15px/1.4 Consolas, monospace; white-space:pre-wrap; word-break:break-all; }
+  ol { margin:6px 0 0; padding-left:28px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PiS2CR Setup</h1>
+  <p class="sub">Set up your Raspberry Pi 4 from this page. Your password is only used during setup and is never saved.</p>
+
+  <section id="s-connect">
+    <h2>1. Connect To Your Pi</h2>
+    <p class="muted">The Pi needs Raspberry Pi OS Lite (64-bit) with SSH turned on, and must be on the same network as this PC.</p>
+    <div id="found" class="pis"></div>
+    <div class="row">
+      <div><label for="host">Pi Address</label><input id="host" placeholder="192.168.1.20 or raspberrypi.local" autocomplete="off"></div>
+      <div><label for="user">Username</label><input id="user" placeholder="made in Raspberry Pi Imager" autocomplete="off"></div>
+      <div><label for="password">Password</label><input id="password" type="password" autocomplete="off"></div>
+    </div>
+    <button id="scan" class="gray" data-tip="Looks for Raspberry Pis on this network. Takes a few seconds.">Find My Pi</button>
+    <button id="connect">Connect</button>
+    <div id="connected" class="hint"></div>
+    <div id="e-connect" class="error"></div>
+  </section>
+
+  <section id="s-install">
+    <h2>2. Install</h2>
+    <p id="install-text" class="muted"></p>
+    <button id="install"></button>
+    <div class="bar"><div id="bar"></div></div>
+    <p id="progress" class="muted"></p>
+    <div id="e-install" class="error"></div>
+  </section>
+
+  <section id="s-switch">
+    <h2>3. Pair Your Switch 2</h2>
+    <ol>
+      <li>Press Start Pairing.</li>
+      <li>On your Switch 2, open Controllers, then Change Grip/Order.</li>
+    </ol>
+    <button id="pair-switch">Start Pairing</button>
+    <button id="cancel-switch" class="gray">Cancel</button>
+    <div id="h-switch" class="hint"></div>
+    <div id="e-switch" class="error"></div>
+  </section>
+
+  <section id="s-controller">
+    <h2>4. Pair Your Controller</h2>
+    <ol>
+      <li>Press Start Pairing.</li>
+      <li>Hold the small sync button on your Pro Controller 2, next to the USB-C port, until its lights flash. Keep it close to the Pi.</li>
+    </ol>
+    <button id="pair-controller">Start Pairing</button>
+    <button id="cancel-controller" class="gray">Cancel</button>
+    <div id="h-controller" class="hint"></div>
+    <div id="e-controller" class="error"></div>
+  </section>
+
+  <section id="s-finish">
+    <h2>5. Open The Dashboard</h2>
+    <p class="muted">PiS2CR keeps the connection to the Pi open and shows the dashboard. Pairing can be redone any time from the setup button in the PiS2CR window.</p>
+    <button id="finish">Open Dashboard</button>
+    <div id="done" class="hint"></div>
+  </section>
+
+  <details open><summary>Details</summary><pre id="log"></pre></details>
+</main>
+<script>
+const token = new URLSearchParams(location.search).get("t") || "";
+const $ = id => document.getElementById(id);
+let state = {}, pollTimer = null, lastAction = "";
+
+async function api(path, body) {
+  const options = { headers: { "X-Setup-Token": token, "Content-Type": "application/json" } };
+  if (body !== undefined) { options.method = "POST"; options.body = JSON.stringify(body); }
+  const reply = await fetch("/api/" + path, options);
+  if (!reply.ok) throw new Error("rejected");
+  return reply.json();
+}
+
+function mark(id, active, done, locked) {
+  const el = $(id);
+  el.classList.toggle("active", !!active);
+  el.classList.toggle("done", !!done);
+  el.classList.toggle("locked", !!locked);
+}
+
+function friendlyHint(hint) {
+  if (!hint) return "Starting...";
+  if (hint.startsWith("WAITING:")) return hint.slice(8).trim().replace(/^./, c => c.toUpperCase()) + ".";
+  if (hint.startsWith("FOUND")) return "Controller found. Pairing...";
+  return hint;
+}
+
+function render() {
+  const s = state, busy = s.busy || "", error = s.error || "";
+  const connected = s.connected, ready = s.installed && s.up_to_date;
+  const errorFor = name => (busy === "" && lastAction === name) ? error : "";
+  $("e-connect").textContent = errorFor("connect") || errorFor("scan");
+  $("e-install").textContent = errorFor("install");
+  $("e-switch").textContent = errorFor("pair-switch");
+  $("e-controller").textContent = errorFor("pair-controller");
+
+  $("connected").textContent = connected
+    ? `Connected to ${s.target.user}@${s.target.host}: ${s.pi.model || "Raspberry Pi"}, ${s.pi.os || ""}${s.pi.arch && s.pi.arch !== "aarch64" ? " (not 64-bit; PiS2CR needs 64-bit)" : ""}`
+    : "";
+  $("scan").disabled = !!busy;
+  $("connect").disabled = !!busy;
+  $("connect").textContent = busy === "connect" ? "Connecting..." : (connected ? "Connect Again" : "Connect");
+  $("scan").textContent = busy === "scan" ? "Searching..." : "Find My Pi";
+
+  $("found").innerHTML = "";
+  (s.found || []).forEach(item => {
+    const b = document.createElement("button");
+    b.className = item.pi ? "pi" : "";
+    b.textContent = `${item.host}${item.name ? " (" + item.name + ")" : ""}${item.pi ? " - Raspberry Pi" : ""}`;
+    b.onclick = () => { $("host").value = item.host; };
+    $("found").appendChild(b);
+  });
+  if (s.found && !s.found.length) $("found").textContent = "No Pi found. Check that it is on and on this network, or type its address.";
+
+  $("install-text").textContent = !connected ? "Connect to the Pi first."
+    : !s.installed ? "Not installed yet. This installs everything and takes several minutes the first time."
+    : s.up_to_date ? "Installed and up to date." : "An update is available for the Pi.";
+  $("install").textContent = busy === "install" ? "Installing..." : (!s.installed ? "Install" : (s.up_to_date ? "Reinstall" : "Update"));
+  $("install").disabled = !connected || !!busy;
+  const p = s.progress;
+  $("bar").style.width = busy === "install" && p ? Math.max(2, Math.round(100 * p.step / p.total)) + "%" : (ready ? "100%" : "0%");
+  $("progress").textContent = busy === "install" && p ? (p.step ? `Step ${p.step} of ${p.total}: ` : "") + p.label : "";
+
+  for (const kind of ["switch", "controller"]) {
+    const paired = s[kind + "_paired"], pairing = busy === "pair-" + kind;
+    $("pair-" + kind).disabled = !ready || !!busy;
+    $("pair-" + kind).textContent = pairing ? "Waiting..." : (paired ? "Pair Again" : "Start Pairing");
+    $("cancel-" + kind).style.display = pairing ? "" : "none";
+    $("h-" + kind).textContent = pairing ? friendlyHint(s.hint) : (paired ? "Paired." : "");
+  }
+  $("finish").disabled = !connected || !!busy;
+
+  const next = !connected ? "s-connect" : !ready ? "s-install" : !s.switch_paired ? "s-switch" : !s.controller_paired ? "s-controller" : "s-finish";
+  mark("s-connect", next === "s-connect", connected, false);
+  mark("s-install", next === "s-install", ready, !connected);
+  mark("s-switch", next === "s-switch", s.switch_paired, !ready);
+  mark("s-controller", next === "s-controller", s.controller_paired, !ready);
+  mark("s-finish", next === "s-finish", false, !ready);
+
+  const log = $("log"), atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  log.textContent = (s.lines || []).join("\n");
+  if (atEnd) log.scrollTop = log.scrollHeight;
+}
+
+async function poll() {
+  clearTimeout(pollTimer);
+  try { state = await api("state"); render(); } catch (e) {
+    $("e-connect").textContent = "The PiS2CR app was closed. Start it again to continue.";
+  }
+  pollTimer = setTimeout(poll, 700);
+}
+
+async function act(name, path, body) {
+  lastAction = name;
+  try { await api(path, body); } catch (e) { /* the next poll shows the problem */ }
+  poll();
+}
+
+$("scan").onclick = () => act("scan", "scan", {});
+$("connect").onclick = () => {
+  const body = { host: $("host").value, user: $("user").value, password: $("password").value };
+  $("password").value = "";
+  act("connect", "connect", body);
+};
+$("install").onclick = () => act("install", "install", {});
+$("pair-switch").onclick = () => act("pair-switch", "pair", { kind: "switch" });
+$("pair-controller").onclick = () => act("pair-controller", "pair", { kind: "controller" });
+$("cancel-switch").onclick = () => api("cancel", {});
+$("cancel-controller").onclick = () => api("cancel", {});
+$("finish").onclick = async () => {
+  await api("finish", {});
+  $("done").textContent = "Done. You can close this page. The dashboard opens in a moment.";
+};
+poll();
+</script>
+</body>
+</html>

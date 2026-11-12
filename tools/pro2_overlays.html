@@ -1,0 +1,337 @@
+<section id="overlays-view" class="pane" hidden>
+  <div class="wrap">
+    <div class="card">
+      <h2 data-tip="Add this link to OBS once as a Browser Source, 1920 x 1080, transparent background. Changes here apply right away, so the link never changes. It needs the SSH tunnel to the Pi.">Overlay</h2>
+      <div class="ov-url" style="margin-top:12px"><input type="text" id="ov-link" readonly aria-label="Overlay link">
+        <button type="button" id="ov-copy" class="btn primary">Copy</button>
+        <a id="ov-open" class="btn" target="_blank" rel="noopener">Open</a></div>
+    </div>
+
+    <div class="card">
+      <h3 data-tip="Drag to move, drag the corner to resize (the text of the Timer and History fills the box), arrow keys nudge (Ctrl resizes). Hold Alt to turn snapping off.">Layout</h3>
+      <div id="ov-stage" class="ov-stage"><iframe id="ov-frame" title="Overlay preview" src="/overlay?demo=1" tabindex="-1"></iframe></div>
+      <div class="row" style="margin-top:12px; justify-content:space-between; align-items:center; gap:12px">
+        <div class="row" style="align-items:center; gap:10px">
+          <label for="ov-snap-num" data-tip="How strongly boxes snap to the edges, the centre and each other while you drag. 0 turns snapping off.">Snapping</label>
+          <input type="range" id="ov-snap" min="0" max="5" step="0.1" aria-label="Snapping strength">
+          <input type="number" id="ov-snap-num" min="0" max="5" step="0.1" style="width:84px">
+        </div>
+        <button type="button" id="ov-reset" class="btn tiny">Reset Layout</button>
+      </div>
+    </div>
+
+    <div id="ov-groups" class="ov-groups"></div>
+
+    <div class="card">
+      <h3>Colors</h3>
+      <div id="ov-colors" class="ov-colors"></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  #overlays-view .ov-url { display: flex; gap: 8px; }
+  #overlays-view .ov-url input { flex: 1; font-family: Consolas, monospace; font-size: 14px; }
+  #overlays-view .ov-url .btn { text-decoration: none; display: inline-flex; align-items: center; }
+  #overlays-view .ov-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; user-select: none;
+    background: repeating-conic-gradient(#20232a 0 25%, #1a1c22 0 50%) 0 0 / 22px 22px; touch-action: none; }
+  #overlays-view .ov-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+  #overlays-view .ov-box { position: absolute; box-sizing: border-box; border: 1.5px solid rgba(255, 255, 255, .45); border-radius: 6px; cursor: move; outline: none; }
+  #overlays-view .ov-box:hover, #overlays-view .ov-box:focus-visible, #overlays-view .ov-box.active { border-color: var(--accent); background: rgba(145, 70, 255, .12); }
+  #overlays-view .ov-box.hidden-widget { border-style: dashed; opacity: .55; }
+  #overlays-view .ov-box .tag { position: absolute; left: 6px; top: 4px; font-size: 12px; font-weight: 600; color: #fff; background: rgba(18, 19, 24, .75); padding: 1px 7px; border-radius: 6px; pointer-events: none; }
+  #overlays-view .ov-box .grip { position: absolute; right: -1px; bottom: -1px; width: 16px; height: 16px; cursor: nwse-resize; background: var(--accent); border-radius: 6px 0 5px 0; opacity: .85; }
+  #overlays-view .ov-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; align-items: start; }
+  #overlays-view .ov-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  #overlays-view .ov-head h3 { margin: 0; }
+  #overlays-view details { margin-top: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #overlays-view summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  #overlays-view .xywh { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  #overlays-view .xywh input { padding: 7px 8px; }
+  #overlays-view .xywh label { font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+  #overlays-view .ov-colors { display: flex; gap: 22px; flex-wrap: wrap; }
+  #overlays-view .swatch { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+  #overlays-view input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
+</style>
+
+<script>
+(() => {
+  const view = document.getElementById("overlays-view");
+  const $ = id => document.getElementById(id);
+  const toggle = (key, label, hint) => ({ key, type: "toggle", label, hint });
+  const range = (key, label, min, max, unit = "%") => ({ key, type: "range", label, min, max, unit });
+  const number = (key, label, min, max, unit = "") => ({ key, type: "number", label, min, max, unit });
+  const GROUPS = [
+    { id: "controller", title: "Controller",
+      options: [toggle("streamer", "Show My Inputs"), toggle("chat", "Show Chat's Inputs"), toggle("tint", "Tint Chat's Inputs", "Mine use my color, chat's use the chat color")],
+      more: [range("opacity", "Opacity", 10, 100)] },
+    { id: "history", title: "History",
+      options: [number("count", "Entries Shown", 1, 20),
+        { key: "align", type: "choice", label: "Align", choices: [["left", "Left"], ["center", "Center"], ["right", "Right"]] },
+        { key: "newest", type: "choice", label: "New Entries", choices: [["top", "Top"], ["bottom", "Bottom"]] },
+        toggle("streamer", "Show My Inputs"), toggle("chat", "Show Chat's Inputs")],
+      more: [range("backdrop", "Background", 0, 100), range("opacity", "Opacity", 10, 100),
+        { ...number("fade", "Fade Out", 0, 600, " s"), hint: "Seconds before an entry disappears. 0 means never." },
+        toggle("names", "Show Chat Names"), toggle("sticks", "Include My Stick Directions", "Only a direction held for a moment, never every movement")] },
+    { id: "timer", title: "Timer",
+      options: [{ key: "label", type: "text", label: "Title" }, toggle("bar", "Show Progress Bar"), toggle("who", "Show Who Redeemed")],
+      more: [range("backdrop", "Background", 0, 100), range("opacity", "Opacity", 10, 100)] },
+  ];
+  const COLORS = [["streamer", "Mine"], ["chat", "Chat"], ["text", "Text"]];
+
+  function el(tag, attrs = {}, ...kids) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v; else if (k === "text") node.textContent = v; else node.setAttribute(k, v);
+    }
+    node.append(...kids);
+    return node;
+  }
+  const clamp = (v, low, high) => Math.max(low, Math.min(high, v));
+  const round1 = v => Math.round(v * 10) / 10;
+
+  let current = null;
+  const setters = [];   // show the latest saved values in the controls
+  let dragging = false;
+
+  function toast(message) {
+    const t = $("tw-toast");
+    t.textContent = message;
+    t.className = "show bad";
+    setTimeout(() => { t.className = ""; }, 3200);
+  }
+
+  // Saves are batched so dragging stays smooth: the newest values per group go out every 90 ms.
+  const queue = {};
+  let flushTimer = null;
+  function save(group, values) {
+    queue[group] = { ...(queue[group] || {}), ...values };
+    if (!flushTimer) flushTimer = setTimeout(flush, 90);
+  }
+  async function flush() {
+    flushTimer = null;
+    const batch = Object.entries(queue);
+    for (const [group] of batch) delete queue[group];
+    for (const [group, values] of batch) {
+      try {
+        const res = await fetch("/overlay/settings", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ group, values }) });
+        if (res.ok) current = await res.json(); else toast((await res.json()).error || "could not save");
+      } catch (e) { toast("dashboard not reachable"); }
+    }
+  }
+
+  async function load() {
+    if (dragging || flushTimer) return;
+    try {
+      current = await (await fetch("/overlay/settings", { cache: "no-store" })).json();
+      setters.forEach(fn => fn());
+    } catch (e) { /* the controls keep their last values */ }
+  }
+
+  // ---- controls -----------------------------------------------------------------------------------------------
+
+  function control(group, o) {
+    const id = `ov-${group}-${o.key}`;
+    const value = () => current[group][o.key];
+    if (o.type === "toggle") {
+      const box = el("input", { type: "checkbox", id });
+      box.addEventListener("change", () => save(group, { [o.key]: box.checked }));
+      setters.push(() => { if (document.activeElement !== box) box.checked = !!value(); });
+      return el("div", { class: "opt" }, el("label", { class: "switch" }, box, el("span")),
+        el("div", {}, el("span", { text: o.label, ...(o.hint ? { "data-tip": o.hint } : {}) })));
+    }
+    if (o.type === "choice") {
+      const buttons = o.choices.map(([v, text]) => {
+        const button = el("button", { type: "button", text });
+        button.addEventListener("click", () => {
+          buttons.forEach(b => b.classList.toggle("on", b === button));
+          save(group, { [o.key]: v });
+        });
+        return button;
+      });
+      setters.push(() => buttons.forEach((b, i) => b.classList.toggle("on", value() === o.choices[i][0])));
+      return el("div", { class: "field" }, el("label", { text: o.label }), el("div", { class: "seg small", role: "group", "aria-label": o.label }, ...buttons));
+    }
+    if (o.type === "range") {
+      const out = el("output");
+      const input = el("input", { type: "range", id, min: o.min, max: o.max, step: "1" });
+      input.addEventListener("input", () => { out.textContent = input.value + o.unit; save(group, { [o.key]: Number(input.value) }); });
+      setters.push(() => { if (document.activeElement !== input) { input.value = value(); out.textContent = value() + o.unit; } });
+      return el("div", { class: "field" }, el("div", { class: "slider-head" }, el("label", { for: id, text: o.label }), out), input);
+    }
+    const input = el("input", { type: o.type === "number" ? "number" : "text", id, ...(o.type === "number" ? { min: o.min, max: o.max, step: "1" } : { maxlength: "40" }) });
+    input.addEventListener("input", () => {
+      if (o.type !== "number") { save(group, { [o.key]: input.value }); return; }
+      const n = Number(input.value);
+      if (input.value !== "" && Number.isFinite(n)) save(group, { [o.key]: clamp(n, o.min, o.max) });
+    });
+    input.addEventListener("blur", () => { input.value = value(); });
+    setters.push(() => { if (document.activeElement !== input) input.value = value(); });
+    return el("div", { class: "field" }, el("label", { for: id, text: o.label + (o.unit ? ` (${o.unit.trim()})` : ""), ...(o.hint ? { "data-tip": o.hint } : {}) }), input);
+  }
+
+  function buildGroup(g) {
+    const visible = el("input", { type: "checkbox", "aria-label": `Show ${g.title}` });
+    visible.addEventListener("change", () => save(g.id, { visible: visible.checked }));
+    setters.push(() => { if (document.activeElement !== visible) visible.checked = !!current[g.id].visible; });
+    const position = el("div", { class: "xywh" });
+    for (const [key, label] of [["x", "X %"], ["y", "Y %"], ["w", "W %"], ["h", "H %"]]) {
+      const input = el("input", { type: "number", step: "0.5", min: key === "w" || key === "h" ? "2" : "0", max: "100" });
+      input.addEventListener("input", () => {
+        const n = Number(input.value);
+        if (input.value !== "" && Number.isFinite(n)) save(g.id, { [key]: clamp(n, key === "w" || key === "h" ? 2 : 0, 100) });
+      });
+      input.addEventListener("blur", () => { input.value = round1(current[g.id][key]); });
+      setters.push(() => { if (document.activeElement !== input) input.value = round1(current[g.id][key]); });
+      position.append(el("label", {}, label, input));
+    }
+    $("ov-groups").append(el("section", { class: "card" },
+      el("div", { class: "ov-head" }, el("h3", { text: g.title }), el("label", { class: "switch" }, visible, el("span"))),
+      ...g.options.map(o => control(g.id, o)),
+      el("details", {}, el("summary", { text: "More" }), ...g.more.map(o => control(g.id, o)),
+        el("div", { class: "field" }, el("label", { text: "Position and Size" }), position))));
+  }
+
+  function buildColors() {
+    for (const [key, label] of COLORS) {
+      const input = el("input", { type: "color", "aria-label": `${label} color` });
+      input.addEventListener("input", () => save("colors", { [key]: input.value }));
+      setters.push(() => { if (document.activeElement !== input) input.value = current.colors[key]; });
+      $("ov-colors").append(el("label", { class: "swatch" }, input, el("span", { text: label })));
+    }
+  }
+
+  // ---- layout editor ------------------------------------------------------------------------------------------
+
+  function buildSnap() {
+    const slider = $("ov-snap"), typed = $("ov-snap-num");
+    const change = n => save("editor", { snap: clamp(n, 0, 5) });
+    slider.addEventListener("input", () => { typed.value = slider.value; change(Number(slider.value)); });
+    typed.addEventListener("input", () => {
+      const n = Number(typed.value);
+      if (typed.value !== "" && Number.isFinite(n)) { slider.value = clamp(n, 0, 5); change(n); }
+    });
+    typed.addEventListener("blur", () => { typed.value = current.editor.snap; });
+    setters.push(() => {
+      if (document.activeElement !== slider && document.activeElement !== typed) slider.value = typed.value = current.editor.snap;
+    });
+  }
+
+  const boxes = {};
+  const stage = $("ov-stage");
+
+  function placeBox(id) {
+    const c = current[id], box = boxes[id];
+    Object.assign(box.style, { left: c.x + "%", top: c.y + "%", width: c.w + "%", height: c.h + "%" });
+    box.classList.toggle("hidden-widget", !c.visible);
+  }
+
+  // Snap an edge (or centre) to the stage edges, the stage centre and the other widgets' edges.
+  function snap(value, size, others, alt) {
+    const reach = current.editor.snap;
+    if (alt || !reach) return value;
+    const targets = [0, 100 - size, 50 - size / 2, ...others.flatMap(([start, length]) => [start, start + length, start - size, start + length - size])];
+    const near = targets.filter(t => Math.abs(t - value) < reach).sort((a, b) => Math.abs(a - value) - Math.abs(b - value))[0];
+    return near === undefined ? value : near;
+  }
+
+  function buildBox(g) {
+    const box = el("div", { class: "ov-box", tabindex: "0", role: "group", "aria-label": `${g.title} position and size` },
+      el("span", { class: "tag", text: g.title }), el("span", { class: "grip" }));
+    boxes[g.id] = box;
+    stage.append(box);
+    const others = () => Object.keys(boxes).filter(k => k !== g.id && current[k].visible)
+      .map(k => ({ x: [current[k].x, current[k].w], y: [current[k].y, current[k].h] }));
+
+    function drag(event, resizing) {
+      event.preventDefault();
+      event.stopPropagation();
+      box.setPointerCapture(event.pointerId);
+      dragging = true;
+      box.classList.add("active");
+      const rect = stage.getBoundingClientRect();
+      const start = { px: event.clientX, py: event.clientY, ...current[g.id] };
+      const peers = others();
+      const move = e => {
+        const dx = (e.clientX - start.px) / rect.width * 100, dy = (e.clientY - start.py) / rect.height * 100;
+        const c = current[g.id];
+        if (resizing) {
+          c.w = round1(clamp(snap(start.x + start.w + dx, 0, peers.map(p => p.x), e.altKey) - start.x, 4, 100 - start.x));
+          c.h = round1(clamp(snap(start.y + start.h + dy, 0, peers.map(p => p.y), e.altKey) - start.y, 4, 100 - start.y));
+          save(g.id, { w: c.w, h: c.h });
+        } else {
+          c.x = round1(clamp(snap(start.x + dx, c.w, peers.map(p => p.x), e.altKey), 0, 100 - c.w));
+          c.y = round1(clamp(snap(start.y + dy, c.h, peers.map(p => p.y), e.altKey), 0, 100 - c.h));
+          save(g.id, { x: c.x, y: c.y });
+        }
+        placeBox(g.id);
+        setters.forEach(fn => fn());
+      };
+      const end = () => {
+        box.removeEventListener("pointermove", move);
+        box.removeEventListener("pointerup", end);
+        box.removeEventListener("pointercancel", end);
+        box.classList.remove("active");
+        dragging = false;
+      };
+      box.addEventListener("pointermove", move);
+      box.addEventListener("pointerup", end);
+      box.addEventListener("pointercancel", end);
+    }
+    box.addEventListener("pointerdown", e => drag(e, e.target.classList.contains("grip")));
+    box.addEventListener("keydown", e => {
+      const step = e.shiftKey ? 2 : 0.5, c = current[g.id];
+      const delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (!delta) return;
+      e.preventDefault();
+      if (e.ctrlKey) {   // ctrl + arrows resizes
+        c.w = round1(clamp(c.w + delta[0], 4, 100 - c.x)); c.h = round1(clamp(c.h + delta[1], 4, 100 - c.y));
+        save(g.id, { w: c.w, h: c.h });
+      } else {
+        c.x = round1(clamp(c.x + delta[0], 0, 100 - c.w)); c.y = round1(clamp(c.y + delta[1], 0, 100 - c.h));
+        save(g.id, { x: c.x, y: c.y });
+      }
+      placeBox(g.id);
+      setters.forEach(fn => fn());
+    });
+  }
+
+  async function copyLink() {
+    try { await navigator.clipboard.writeText($("ov-link").value); $("ov-copy").textContent = "Copied"; }
+    catch (e) { $("ov-copy").textContent = "Select and Copy"; }
+    setTimeout(() => { $("ov-copy").textContent = "Copy"; }, 1600);
+  }
+
+  async function init() {
+    $("ov-link").value = `${location.origin}/overlay`;
+    $("ov-open").href = "/overlay";
+    $("ov-copy").addEventListener("click", copyLink);
+    $("ov-reset").addEventListener("click", async () => {
+      try { current = await (await fetch("/overlay/reset-layout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })).json(); }
+      catch (e) { toast("could not reset"); return; }
+      GROUPS.forEach(g => placeBox(g.id));
+      setters.forEach(fn => fn());
+    });
+    try { current = await (await fetch("/overlay/settings", { cache: "no-store" })).json(); }
+    catch (e) { return; }
+    GROUPS.forEach(buildGroup);
+    buildColors();
+    buildSnap();
+    GROUPS.forEach(buildBox);
+    GROUPS.forEach(g => placeBox(g.id));
+    setters.forEach(fn => fn());
+  }
+  const ready = init();
+
+  let refresher = null;
+  window.overlaysActivate = on => {
+    clearInterval(refresher);
+    if (!on) return;
+    ready.then(() => {
+      load().then(() => GROUPS.forEach(g => boxes[g.id] && placeBox(g.id)));
+      refresher = setInterval(() => load().then(() => GROUPS.forEach(g => boxes[g.id] && !dragging && placeBox(g.id))), 2000);
+    });
+  };
+})();
+</script>

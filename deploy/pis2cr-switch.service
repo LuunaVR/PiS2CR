@@ -1,0 +1,14 @@
+[Unit]
+Description=PiS2CR Switch-side Pro Controller emulation
+After=bluetooth.service pis2cr-ble-interval.service
+Wants=bluetooth.service
+
+[Service]
+EnvironmentFile=/etc/pis2cr.conf
+ExecStart=/usr/local/lib/pis2cr/pis2cr-switch.sh run
+ExecStopPost=/usr/local/lib/pis2cr/pis2cr-switch.sh cleanup
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=PiS2CR relay: Pro Controller 2 (BLE) to Switch backend
+After=pis2cr-switch.service bluetooth.service
+Wants=pis2cr-switch.service
+
+[Service]
+User=@USER@
+WorkingDirectory=@REPO@/tools
+EnvironmentFile=/etc/pis2cr.conf
+ExecStart=/usr/bin/python3 -u relay_pro2.py ${PIS2CR_CONTROLLER_MAC}
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

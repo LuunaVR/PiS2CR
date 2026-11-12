@@ -1,0 +1,128 @@
+diff --git a/poc/control.c b/poc/control.c
+index 368b7a5..6a6cd43 100644
+--- a/poc/control.c
++++ b/poc/control.c
+@@ -63,6 +63,29 @@ static gboolean mouse_input(JsonObject *o,ProState *s) {
+     s->mouse_buttons=(uint8_t)v[3];s->mouse_active=v[4]!=0;
+     return TRUE;
+ }
++/* PiS2CR: optional "imu": 18 signed 16-bit values (3 samples of accel xyz, gyro xyz); absent means neutral. */
++static gboolean imu_input(JsonObject *o,ProState *s) {
++    JsonNode *n=json_object_get_member(o,"imu");
++    if(!n){s->imu_valid=FALSE;return TRUE;}
++    if(!JSON_NODE_HOLDS_ARRAY(n))return FALSE;
++    JsonArray *a=json_node_get_array(n);if(json_array_get_length(a)!=18)return FALSE;
++    int16_t v[18];
++    for(int i=0;i<18;i++) {
++        JsonNode *e=json_array_get_element(a,i);
++        if(!JSON_NODE_HOLDS_VALUE(e) || json_node_get_value_type(e)!=G_TYPE_INT64)return FALSE;
++        gint64 x=json_node_get_int(e);if(x<-32768 || x>32767)return FALSE;v[i]=(int16_t)x;
++    }
++    for(int i=0;i<18;i++)s->imu_samples[i/6][i%6]=v[i];
++    s->imu_valid=TRUE;return TRUE;
++}
++/* PiS2CR: optional "battery": raw battery/connection byte for the 0x30 report. */
++static gboolean battery_input(JsonObject *o,ProState *s) {
++    JsonNode *n=json_object_get_member(o,"battery");
++    if(!n)return TRUE;
++    if(!JSON_NODE_HOLDS_VALUE(n) || json_node_get_value_type(n)!=G_TYPE_INT64)return FALSE;
++    gint64 x=json_node_get_int(n);if(x<0 || x>255)return FALSE;
++    s->battery=(uint8_t)x;s->battery_set=TRUE;return TRUE;
++}
+ static char *request(gpointer data,const char *text) {
+     ProControl *c=data;
+     c->last_request=g_get_monotonic_time();
+@@ -74,14 +97,17 @@ static char *request(gpointer data,const char *text) {
+     JsonNode *mn=json_object_get_member(o,"method");
+     if(!mn || !JSON_NODE_HOLDS_VALUE(mn) || json_node_get_value_type(mn)!=G_TYPE_STRING)return failure("Expected method string");
+     const char *method=json_node_get_string(mn);
++    if(!battery_input(o,c->state))return failure("Invalid battery");
+     if(!strcmp(method,"input")) {
+         int buttons[3],sticks[4];
+         if(!numbers(o,"buttons",3,255,buttons) || !numbers(o,"sticks",4,4095,sticks))return failure("Invalid input frame");
+         for(int i=0;i<3;i++)c->state->buttons[i]=buttons[i];
+         for(int i=0;i<4;i++)c->state->sticks[i]=sticks[i];
+         if(!mouse_input(o,c->state))return failure("Invalid mouse input");
++        if(!imu_input(o,c->state))return failure("Invalid imu input");
+         *c->release_at=g_get_monotonic_time()+500000;
+     } else if(!strcmp(method,"release")) {
++        c->state->imu_valid=FALSE;
+         memset(c->state->buttons,0,3);c->state->mouse_buttons=0;c->state->mouse_active=FALSE;
+         c->state->mouse_dx=c->state->mouse_dy=c->state->mouse_wheel=0;
+         c->state->sticks[0]=2159;c->state->sticks[1]=1916;
+diff --git a/poc/pro-controller.c b/poc/pro-controller.c
+index 275db46..a116375 100644
+--- a/poc/pro-controller.c
++++ b/poc/pro-controller.c
+@@ -1824,6 +1824,7 @@ static gboolean tick(gpointer unused) {
+ 
+     if(release_at && now>=release_at) {
+         memset(state.buttons,0,3);
++        state.imu_valid=false;
+         state.sticks[0]=0x86f;state.sticks[1]=0x77c;
+         state.sticks[2]=0x816;state.sticks[3]=0x7dd;
+         release_at=0;
+@@ -3162,7 +3163,7 @@ int main(int argc,char **argv) {
+         desktop=pro_control_new(&state,&release_at,&verbose_traffic,getuid(),TRUE,control_socket,loop,&error);
+         if(!desktop) {g_printerr("%s\n",error->message);g_error_free(error);return 1;}
+         g_unix_signal_add(SIGINT,quit,NULL);g_unix_signal_add(SIGTERM,quit,NULL);
+-        g_timeout_add(15,tick,NULL);log_event("mock_ready","No Bluetooth activity");
++        g_timeout_add(2,tick,NULL);log_event("mock_ready","No Bluetooth activity");
+         g_main_loop_run(loop);pro_control_free(desktop);g_main_loop_unref(loop);return 0;
+     }
+     gboolean desktop_mode=FALSE;uid_t desktop_owner=0;
+@@ -3487,7 +3488,7 @@ int main(int argc,char **argv) {
+             pro_control_log(desktop,item->event,item->detail);pending_log_free(item);
+         }
+     }
+-    g_timeout_add(15,tick,NULL);g_timeout_add_seconds(5,stats,NULL);
++    g_timeout_add(2,tick,NULL);g_timeout_add_seconds(5,stats,NULL);
+     if(!desktop_mode)g_timeout_add_seconds(600,quit,NULL);
+     GIOChannel *io=g_io_channel_unix_new(STDIN_FILENO);
+     g_io_channel_set_flags(io,g_io_channel_get_flags(io)|G_IO_FLAG_NONBLOCK,NULL);
+diff --git a/poc/protocol.c b/poc/protocol.c
+index 08ab6f8..37abd36 100644
+--- a/poc/protocol.c
++++ b/poc/protocol.c
+@@ -66,7 +66,7 @@ void pro_input(const ProState *s, uint8_t timer, uint8_t out[50]) {
+     out[0] = 0xa1;
+     out[1] = 0x30;
+     out[2] = timer;
+-    out[3] = s->type == CONTROLLER_PRO ? 0x80 : 0x9e;
++    out[3] = s->type == CONTROLLER_PRO ? (s->battery_set ? s->battery : 0x80) : 0x9e;
+     if (s->type != CONTROLLER_JOYCON_L) out[4] = s->buttons[0];
+     out[5] = s->buttons[1] & (s->type == CONTROLLER_JOYCON_L ? 0x29 :
+                               s->type == CONTROLLER_JOYCON_R ? 0x16 : 0xff);
+@@ -74,7 +74,15 @@ void pro_input(const ProState *s, uint8_t timer, uint8_t out[50]) {
+     if (s->type != CONTROLLER_JOYCON_R) pack(out + 7, s->sticks[0], s->sticks[1]);
+     if (s->type != CONTROLLER_JOYCON_L) pack(out + 10, s->sticks[2], s->sticks[3]);
+     out[13] = 0x80;
+-    if (s->imu) for (int i = 0; i < 3; i++) out[19 + 12 * i] = 0x10;
++    if (s->imu) for (int i = 0; i < 3; i++) {
++        if (s->imu_valid) {
++            for (int j = 0; j < 6; j++) {
++                uint16_t v = (uint16_t)s->imu_samples[i][j];
++                out[14 + 12 * i + 2 * j] = (uint8_t)v;
++                out[15 + 12 * i + 2 * j] = (uint8_t)(v >> 8);
++            }
++        } else out[19 + 12 * i] = 0x10;
++    }
+ }
+ 
+ static uint16_t axis16(uint16_t value, uint16_t center, bool invert) {
+diff --git a/poc/protocol.h b/poc/protocol.h
+index 85d4649..9f7def6 100644
+--- a/poc/protocol.h
++++ b/poc/protocol.h
+@@ -17,6 +17,11 @@ typedef struct {
+     int32_t mouse_dx, mouse_dy, mouse_wheel;
+     uint8_t mouse_buttons;
+     bool mouse_active;
++    /* PiS2CR: 3 samples of accel xyz + gyro xyz in Switch 1 raw units, and a raw battery/connection byte. */
++    int16_t imu_samples[3][6];
++    bool imu_valid;
++    uint8_t battery;
++    bool battery_set;
+ } ProState;
+ void controller_init(ProState *s, ControllerType type, const uint8_t address[6]);
+ void controller_set_colors(ProState *s,

@@ -1,0 +1,214 @@
+<svg id="pad" xmlns="http://www.w3.org/2000/svg" viewBox="100 55 800 545" role="img" aria-label="Controller input display" style="overflow:visible;touch-action:none">
+<defs>
+  <linearGradient id="bodyGrad" x1="0" y1="0" x2="0.15" y2="1"><stop stop-color="#34323a"/><stop offset=".5" stop-color="#2c2a32"/><stop offset="1" stop-color="#26252c"/></linearGradient>
+  <linearGradient id="gripGrad" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#3a3841"/><stop offset="1" stop-color="#303039"/></linearGradient>
+  <linearGradient id="capGrad" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#85818a"/><stop offset="1" stop-color="#6a6671"/></linearGradient>
+  <linearGradient id="activeCapGrad" x1="0" y1="0" x2=".7" y2="1"><stop style="stop-color:var(--soft-pink)"/><stop offset="1" style="stop-color:var(--pink-deep)"/></linearGradient>
+  <linearGradient id="chatCapGrad" x1="0" y1="0" x2=".7" y2="1"><stop style="stop-color:var(--chat-soft)"/><stop offset="1" style="stop-color:var(--chat-deep)"/></linearGradient>
+  <linearGradient id="mergeCapGrad" x1="0" y1="0" x2=".7" y2="1"><stop style="stop-color:var(--merge-soft)"/><stop offset="1" style="stop-color:var(--merge-deep)"/></linearGradient>
+  <filter id="bodyShadow" x="-15%" y="-20%" width="130%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#07060b" flood-opacity=".34"/></filter>
+  <clipPath id="shellClip"><path d="M356 115 C399 106 448 116 500 116 C552 116 601 106 644 115 C724 123 788 135 810 184 C834 230 850 322 858 406 C870 499 853 555 822 570 C790 589 760 572 735 538 C708 502 692 451 674 437 Q663 426 635 426 H365 Q337 426 326 437 C308 451 292 502 265 538 C240 572 210 589 178 570 C147 555 130 499 142 406 C150 322 166 230 190 184 C212 135 276 123 356 115 Z"/></clipPath>
+  <style>
+    :root { --ink:#111017; --pink:#efa3cb; --soft-pink:#ffd3e9; --pink-deep:#dd88b7; --pink-edge:#c97da9; --pink-glow:rgba(234,160,200,.5);
+      --chat:#a98bff; --chat-soft:#d9ccff; --chat-deep:#8f70f0; --chat-edge:#7e5ee0; --chat-glow:rgba(169,139,255,.55); --white:#f5f0f6;
+      --merge:#cc97e5; --merge-soft:#e8d0f3; --merge-deep:#a77cbc; --merge-edge:#8f6aa0; --merge-glow:rgba(204,151,229,.5); }
+    .shell { fill:url(#bodyGrad); stroke:var(--ink); stroke-width:7; stroke-linejoin:round; }
+    .panel-seam { fill:none; stroke:#55515d; stroke-width:1.8; stroke-linecap:round; opacity:.43; }
+    .grip { fill:url(#gripGrad); opacity:.85; }
+    .grip-seam { fill:none; stroke:#4d4955; stroke-width:2; opacity:.55; }
+    .accent { fill:none; stroke:var(--pink); stroke-width:3; stroke-linecap:round; opacity:.85; }
+    .shoulder { cursor:pointer; }
+    .shoulder-base { fill:#625e68; stroke:var(--ink); stroke-width:5; stroke-linejoin:round; transition:fill .25s ease-out; }
+    .shoulder-bevel { fill:none; stroke:#9c98a3; stroke-width:2.7; opacity:.72; pointer-events:none; }
+    .shoulder-letter { fill:#d6d2dc; font:700 12px system-ui,sans-serif; text-anchor:middle; pointer-events:none; transition:fill .25s ease-out; }
+    .shoulder-target { fill:transparent; cursor:pointer; }
+    .pressable { cursor:pointer; outline:none; transition:filter .25s ease-out; }
+    .face-base { fill:#131219; stroke:#1a1820; stroke-width:3.5; }
+    .face-key { fill:#7c7885; transition:fill .25s ease-out; }
+    .face-text { fill:#f9f5fa; font:600 22px system-ui,sans-serif; text-anchor:middle; dominant-baseline:central; pointer-events:none; transition:fill .25s ease-out; }
+    .system-core { fill:#6d6974; stroke:#16141b; stroke-width:4.2; transition:fill .25s ease-out; }
+    .system-mark { fill:none; stroke:#f3eef5; stroke-width:3.6; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; transition:stroke .25s ease-out; }
+    .system-letter { fill:#f5f0f6; font:600 16px system-ui,sans-serif; text-anchor:middle; dominant-baseline:central; pointer-events:none; transition:fill .25s ease-out; }
+    .dpad-base { fill:#17161c; stroke:#100f14; stroke-width:4; stroke-linejoin:round; }
+    .dpad-direction { fill:#706c77; transition:fill .25s ease-out; }
+    .dpad-arrow { fill:none; stroke:#e6e1e9; stroke-width:3.6; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; transition:stroke .25s ease-out; }
+    .dpad-center { fill:#77727d; pointer-events:none; }
+    .stick { cursor:grab; transition:filter .25s ease-out; }
+    .stick:active { cursor:grabbing; }
+    .stick-housing { fill:#201e26; stroke:#5c5863; stroke-width:6; }
+    .stick-well { fill:#1b1921; stroke:#100f15; stroke-width:2.8; }
+    .stick-ring { fill:none; stroke:#8b8490; stroke-width:3; transition:stroke .25s ease-out, filter .25s ease-out; }
+    .stick-lip { fill:#38353f; stroke:#15141b; stroke-width:4; transition:stroke .25s ease-out; }
+    .stick-cap { fill:url(#capGrad); stroke:#33303a; stroke-width:3; }
+    .stick-cap-lit { fill:url(#activeCapGrad); opacity:0; pointer-events:none; transition:opacity .25s ease-out; }
+    .stick-cap-rim { fill:none; stroke:#b4adb9; stroke-opacity:.48; stroke-width:1.8; pointer-events:none; transition:stroke .25s ease-out; }
+    .pressable.pressed .face-key, .pressable.pressed .system-core, .pressable.pressed .dpad-direction { fill:var(--pink); }
+    .pressable.pressed .system-mark { stroke:#3d303d; }
+    .pressable.pressed .face-text, .pressable.pressed .system-letter { fill:#312732; }
+    .pressable.pressed .dpad-arrow { stroke:#352a35; }
+    .pressable.pressed .shoulder-base { fill:var(--pink); }
+    .pressable.pressed .shoulder-letter { fill:#362b37; }
+    .pressable.pressed { filter:drop-shadow(0 0 5px var(--pink-glow)); }
+    .stick.active .stick-ring, .stick.pressed .stick-ring { stroke:var(--soft-pink); filter:drop-shadow(0 0 4px var(--pink)); }
+    .stick.active .stick-lip, .stick.pressed .stick-lip { stroke:var(--pink-edge); }
+    .stick.active .stick-cap-lit, .stick.pressed .stick-cap-lit { opacity:1; }
+    .stick.active .stick-cap-rim, .stick.pressed .stick-cap-rim { stroke:var(--soft-pink); }
+    .stick.pressed { filter:drop-shadow(0 0 5px var(--pink-glow)); }
+    .pressable.pressed.chat .face-key, .pressable.pressed.chat .system-core, .pressable.pressed.chat .dpad-direction, .pressable.pressed.chat .shoulder-base { fill:var(--chat); }
+    .pressable.pressed.chat { filter:drop-shadow(0 0 5px var(--chat-glow)); }
+    .stick.chat.active .stick-ring, .stick.chat.pressed .stick-ring { stroke:var(--chat-soft); filter:drop-shadow(0 0 4px var(--chat)); }
+    .stick.chat.active .stick-lip, .stick.chat.pressed .stick-lip { stroke:var(--chat-edge); }
+    .stick.chat .stick-cap-lit { fill:url(#chatCapGrad); }
+    .stick.chat.active .stick-cap-rim, .stick.chat.pressed .stick-cap-rim { stroke:var(--chat-soft); }
+    .stick.chat.pressed { filter:drop-shadow(0 0 5px var(--chat-glow)); }
+    .pressable.pressed.both .face-key, .pressable.pressed.both .system-core, .pressable.pressed.both .dpad-direction, .pressable.pressed.both .shoulder-base { fill:var(--merge); }
+    .pressable.pressed.both { filter:drop-shadow(0 0 5px var(--merge-glow)); }
+    .stick.both.active .stick-ring, .stick.both.pressed .stick-ring { stroke:var(--merge-soft); filter:drop-shadow(0 0 4px var(--merge)); }
+    .stick.both.active .stick-lip, .stick.both.pressed .stick-lip { stroke:var(--merge-edge); }
+    .stick.both .stick-cap-lit { fill:url(#mergeCapGrad); }
+    .stick.both.active .stick-cap-rim, .stick.both.pressed .stick-cap-rim { stroke:var(--merge-soft); }
+    .stick.both.pressed { filter:drop-shadow(0 0 5px var(--merge-glow)); }
+    .status-led { fill:#6c6674; }
+    .pressable.pressed *, .stick.active *, .stick.pressed * { transition-duration:.04s; }
+    .status-led.on { fill:var(--pink); }
+  </style>
+</defs>
+
+<g id="left-shoulder" class="shoulder pressable" data-b="L">
+  <path class="shoulder-base" d="M226 145 C232 124 254 111 284 107 C316 105 344 114 372 127 L389 137 Q300 131 235 154 Z"/>
+  <path class="shoulder-bevel" d="M239 136 Q264 115 290 115 Q326 113 353 130"/>
+  <text class="shoulder-letter" x="280" y="120">L</text>
+  <path class="shoulder-target" d="M226 145 C232 124 254 111 284 107 C316 105 344 114 372 127 L389 137 Q300 131 235 154 Z"/>
+</g>
+<g id="right-shoulder" class="shoulder pressable" data-b="R">
+  <path class="shoulder-base" d="M774 145 C768 124 746 111 716 107 C684 105 656 114 628 127 L611 137 Q700 131 765 154 Z"/>
+  <path class="shoulder-bevel" d="M761 136 Q736 115 710 115 Q674 113 647 130"/>
+  <text class="shoulder-letter" x="720" y="120">R</text>
+  <path class="shoulder-target" d="M774 145 C768 124 746 111 716 107 C684 105 656 114 628 127 L611 137 Q700 131 765 154 Z"/>
+</g>
+
+<g filter="url(#bodyShadow)">
+  <path class="shell" d="M356 115 C399 106 448 116 500 116 C552 116 601 106 644 115 C724 123 788 135 810 184 C834 230 850 322 858 406 C870 499 853 555 822 570 C790 589 760 572 735 538 C708 502 692 451 674 437 Q663 426 635 426 H365 Q337 426 326 437 C308 451 292 502 265 538 C240 572 210 589 178 570 C147 555 130 499 142 406 C150 322 166 230 190 184 C212 135 276 123 356 115 Z"/>
+  <g clip-path="url(#shellClip)">
+    <path class="grip" d="M117 371 C196 377 242 419 303 469 C279 521 245 578 184 591 L118 592 Z"/>
+    <path class="grip" d="M883 371 C804 377 758 419 697 469 C721 521 755 578 816 591 L882 592 Z"/>
+    <path class="grip-seam" d="M153 385 C218 401 269 438 305 468"/>
+    <path class="grip-seam" d="M847 385 C782 401 731 438 695 468"/>
+    <path class="accent" d="M162 436 C173 492 195 535 219 550"/>
+    <path class="accent" d="M838 436 C827 492 805 535 781 550"/>
+  </g>
+  <path class="panel-seam" d="M200 213 C248 144 314 141 385 137 Q500 131 615 137 C686 141 752 144 800 213 M200 213 C190 274 200 359 244 394 M800 213 C810 274 800 359 756 394 M244 394 Q259 422 305 425 M756 394 Q741 422 695 425"/>
+</g>
+
+<g id="left-stick" class="stick" data-stick="left">
+  <circle class="stick-housing" cx="314" cy="237" r="61"/>
+  <circle class="stick-well" cx="314" cy="237" r="54"/>
+  <circle class="stick-ring" cx="314" cy="237" r="51"/>
+  <g id="left-move">
+    <circle class="stick-lip" cx="314" cy="237" r="44"/>
+    <circle class="stick-cap" cx="314" cy="237" r="37"/>
+    <circle class="stick-cap-lit" cx="314" cy="237" r="35.5"/>
+    <circle class="stick-cap-rim" cx="314" cy="237" r="30"/>
+  </g>
+</g>
+
+<g class="pressable" data-b="MINUS"><circle class="system-core" cx="419" cy="177" r="17"/><path class="system-mark" d="M413 177 H425"/></g>
+<g class="pressable" data-b="PLUS"><circle class="system-core" cx="584" cy="177" r="17"/><path class="system-mark" d="M577 177 H591 M584 170 V184"/></g>
+<g class="pressable" data-b="CAPTURE"><rect class="system-core" x="445" y="214" width="34" height="34" rx="7"/><rect class="system-mark" x="453" y="222" width="18" height="18" rx="2" stroke-width="2.4"/></g>
+<g class="pressable" data-b="HOME"><circle class="system-core" cx="547" cy="231" r="17"/><path class="system-mark" d="M537 231 L547 222 L557 231 V239 H537 Z" stroke-width="2.8"/></g>
+
+<g id="dpad">
+  <path class="dpad-base" d="M390 283 H411 Q420 283 420 292 V315 H442 Q451 315 451 324 V347 Q451 356 442 356 H420 V379 Q420 388 411 388 H390 Q381 388 381 379 V356 H359 Q350 356 350 347 V324 Q350 315 359 315 H381 V292 Q381 283 390 283 Z"/>
+  <g class="pressable" data-b="UP"><path class="dpad-direction" d="M389 291 H412 V321 H389 Z"/><path class="dpad-arrow" d="M391 311 L400.5 302.5 L410 311"/></g>
+  <g class="pressable" data-b="DOWN"><path class="dpad-direction" d="M389 350 H412 V380 H389 Z"/><path class="dpad-arrow" d="M391 360 L400.5 368.5 L410 360"/></g>
+  <g class="pressable" data-b="LEFT"><path class="dpad-direction" d="M358 323 H387 V348 H358 Z"/><path class="dpad-arrow" d="M377 326 L368 335.5 L377 345"/></g>
+  <g class="pressable" data-b="RIGHT"><path class="dpad-direction" d="M414 323 H443 V348 H414 Z"/><path class="dpad-arrow" d="M424 326 L433 335.5 L424 345"/></g>
+  <path class="dpad-center" d="M387 321 H414 V350 H387 Z"/>
+</g>
+
+<g class="pressable" data-b="X"><circle class="face-base" cx="688" cy="179" r="29"/><circle class="face-key" cx="688" cy="179" r="24"/><text class="face-text" x="688" y="178">X</text></g>
+<g class="pressable" data-b="Y"><circle class="face-base" cx="625" cy="231" r="29"/><circle class="face-key" cx="625" cy="231" r="24"/><text class="face-text" x="625" y="230">Y</text></g>
+<g class="pressable" data-b="A"><circle class="face-base" cx="751" cy="231" r="29"/><circle class="face-key" cx="751" cy="231" r="24"/><text class="face-text" x="751" y="230">A</text></g>
+<g class="pressable" data-b="B"><circle class="face-base" cx="688" cy="283" r="29"/><circle class="face-key" cx="688" cy="283" r="24"/><text class="face-text" x="688" y="282">B</text></g>
+
+<g id="right-stick" class="stick" data-stick="right">
+  <circle class="stick-housing" cx="601" cy="337" r="57"/>
+  <circle class="stick-well" cx="601" cy="337" r="50"/>
+  <circle class="stick-ring" cx="601" cy="337" r="47"/>
+  <g id="right-move">
+    <circle class="stick-lip" cx="601" cy="337" r="40"/>
+    <circle class="stick-cap" cx="601" cy="337" r="33"/>
+    <circle class="stick-cap-lit" cx="601" cy="337" r="31.5"/>
+    <circle class="stick-cap-rim" cx="601" cy="337" r="26"/>
+  </g>
+</g>
+
+<g class="pressable" data-b="C"><rect class="system-core" x="483" y="364" width="34" height="34" rx="7"/><text class="system-letter" x="500" y="381">C</text></g>
+<g id="player-leds" aria-hidden="true"><rect class="status-led on" x="475" y="409" width="10" height="4" rx="2"/><rect class="status-led" x="488" y="409" width="10" height="4" rx="2"/><rect class="status-led" x="501" y="409" width="10" height="4" rx="2"/><rect class="status-led" x="514" y="409" width="10" height="4" rx="2"/></g>
+</svg>
+<script>
+  const STICKS = {
+    left: { group: "left-stick", cap: "left-move", cx: 314, cy: 237, click: "LS" },
+    right: { group: "right-stick", cap: "right-move", cx: 601, cy: 337, click: "RS" },
+  };
+  const CAP_TRAVEL = 15;   // how far the cap moves on screen at full deflection
+  const DRAG_RADIUS = 43;  // pointer distance from the centre that counts as full deflection
+  // Sides currently being dragged on the dashboard; their caps follow the pointer instead of the state.
+  const dragging = {};
+  const rawUnit = v => Math.max(-1, Math.min(1, (v - 2048) / 1600));
+
+  // x and y run -1..1 with y up; tint is "chat" for chat alone and "both" when streamer and chat share the input.
+  function placeCap(side, x, y, tint = "") {
+    const { group, cap } = STICKS[side];
+    document.getElementById(cap).setAttribute("transform", `translate(${(x * CAP_TRAVEL).toFixed(2)} ${(-y * CAP_TRAVEL).toFixed(2)})`);
+    const stick = document.getElementById(group);
+    stick.classList.toggle("active", Math.hypot(x, y) > 0.12);
+    stick.classList.toggle("chat", tint === "chat");
+    stick.classList.toggle("both", tint === "both");
+  }
+
+  // show picks whose inputs are drawn: streamer (controller and dashboard clicks), chat, and whether chat is tinted.
+  const SHOW_ALL = { streamer: true, chat: true, colors: true };
+  function drawPad(s, show = SHOW_ALL) {
+    const own = show.streamer ? new Set([...s.buttons, ...s.injected]) : new Set();
+    const chatHeld = show.chat ? new Set(s.chat_buttons || []) : new Set();
+    document.querySelectorAll("[data-b]").forEach(el => {
+      const name = el.dataset.b;
+      el.classList.toggle("pressed", own.has(name) || chatHeld.has(name));
+      el.classList.toggle("chat", show.colors && chatHeld.has(name) && !own.has(name));
+      el.classList.toggle("both", show.colors && chatHeld.has(name) && own.has(name));
+    });
+    for (const side of ["left", "right"]) {
+      const click = STICKS[side].click;
+      const clickTint = show.colors && chatHeld.has(click) ? (own.has(click) ? "both" : "chat") : "";
+      document.getElementById(STICKS[side].group).classList.toggle("pressed", own.has(click) || chatHeld.has(click));
+      if (dragging[side]) continue;
+      const chatStick = show.chat && s.chat_sticks && s.chat_sticks[side];
+      // A larger raw Y is assumed to mean the stick is pushed up; not yet verified.
+      const ownStick = show.streamer ? (s.injected_sticks[side] || [rawUnit(s[side][0]), rawUnit(s[side][1])]) : [0, 0];
+      if (chatStick) {
+        placeCap(side, chatStick[0], chatStick[1], !show.colors ? "" : Math.hypot(...ownStick) > 0.12 || clickTint === "both" ? "both" : "chat");
+      } else {
+        placeCap(side, ownStick[0], ownStick[1], clickTint);
+      }
+    }
+  }
+
+  // Requests overlap so the round trip over the SSH tunnel does not limit the refresh rate; stale replies are dropped.
+  function startPolling(onState, onError, intervalMs = 33) {
+    let inflight = 0, sent = 0, newest = 0;
+    setInterval(async () => {
+      if (inflight >= 3) return;
+      const seq = ++sent;
+      inflight++;
+      try {
+        const s = await (await fetch("/state", { cache: "no-store" })).json();
+        if (seq > newest) { newest = seq; onState(s); }
+      } catch (e) {
+        onError(e);
+      } finally {
+        inflight--;
+      }
+    }, intervalMs);
+  }
+</script>
