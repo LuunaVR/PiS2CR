@@ -27,7 +27,7 @@ The Extension involves three parties, and each is responsible for its own handli
 | Connection data | Technical data created by any internet connection, such as IP address and request time. | Whenever your browser connects to the relay. This is handled by the infrastructure provider described in section 6. |
 | Public Twitch profile details | Your Twitch username and display name, and whether you follow, subscribe or are a VIP on the channel. | Only for viewers who shared their identity, and only when the streamer's setup looks them up (section 5). |
 
-The Extension does **not** ask for or receive your Twitch password, email address, real name, payment information, precise location, contacts or any other personal details. It does not read your Twitch chat messages through the viewer page.
+The Extension is not designed to ask for or receive your Twitch password, email address, real name, payment information, precise location, contacts or similar personal details. The viewer page does not read your Twitch chat messages. Information may also be handled in ways that are not listed in the table where that is incidental to running, securing or troubleshooting the service, as described in sections 6 and 7.
 
 ## 4. How Information Is Used
 
@@ -39,7 +39,7 @@ Information is used only to operate the Extension:
 - To show the streamer, in their private dashboard, who is playing and why a request was allowed or refused.
 - To protect the service from abuse, overload and misuse.
 
-Information is not used for advertising, behavioural profiling, analytics, selling, or any purpose unrelated to the above.
+We may also use information to diagnose and fix faults, measure and improve reliability, investigate and prevent abuse, enforce the Terms of Service, and comply with law. We do not currently use information for advertising, behavioural profiling or selling, and we do not currently run analytics on viewers.
 
 ## 5. Identity Sharing And Name Lookups
 
@@ -53,21 +53,24 @@ Sharing your identity is optional. It is required only if the streamer has chose
 ## 6. Where Information Goes
 
 1. **Your browser and Twitch.** The Extension page runs inside Twitch. Twitch handles sign-in and identity sharing under its own privacy notice: <https://www.twitch.tv/p/legal/privacy-notice/>.
-2. **The relay.** A relay hosted on Cloudflare, Inc. ("Cloudflare") passes messages between your browser and the streamer's setup. The relay verifies the signed Twitch token your browser presents, checks that the request comes from Twitch, limits message rates, and forwards inputs. It is built not to store your inputs or identity beyond the moment needed to forward them. As the hosting provider, Cloudflare may process technical connection data under its own privacy policy: <https://www.cloudflare.com/privacypolicy/>.
-3. **The streamer's setup.** Your anonymous ID, role, Twitch user ID (if shared) and inputs are delivered to the streamer's Raspberry Pi. It keeps a short list of recent activity and a name cache in memory only; both are lost when the program restarts. The streamer may also save a list of allowed Twitch usernames in their own settings. The streamer may show activity on stream, for example on an overlay.
+2. **The relay.** A relay hosted on Cloudflare, Inc. ("Cloudflare") passes messages between your browser and the streamer's setup. The relay verifies the signed Twitch token your browser presents, checks that the request comes from Twitch, limits message rates, and forwards inputs. To do this it holds connection details (your anonymous ID, role, Twitch user ID if shared, and rate counters) for as long as your connection is open, and it briefly handles each input as it passes through. The relay is not designed to keep a permanent record of inputs. However, the relay's hosting platform may store or log requests, connection details and errors, and we may turn on logging or diagnostics at any time to investigate faults or abuse. Cloudflare may process technical connection data under its own privacy policy: <https://www.cloudflare.com/privacypolicy/>.
+3. **The streamer's setup.** Your anonymous ID, role, Twitch user ID (if shared) and inputs are delivered to the streamer's Raspberry Pi. It keeps a list of recent activity (who pressed what, and whether it was allowed) and a name cache, mainly in memory, and these are lost when the program restarts. The streamer's setup may also write operational logs, and the streamer may save settings such as a list of allowed Twitch usernames. The streamer decides what else to do with this information: for example, they may show activity on stream or on an overlay, and Twitch features such as clips and past broadcasts may capture it. Inputs and anything shown on stream are not confidential.
 
-We do not sell, rent or trade information, and we do not share it with anyone other than the parties described above, except where the law requires it (section 9).
+We do not sell or rent information. We share it only with the parties described above, with service providers who help us run the Extension, in connection with a transfer of the project, and where the law requires or permits it (section 9).
 
 ## 7. Retention
 
-- The relay does not intentionally keep inputs or identity data after forwarding them.
-- Data held in memory on the streamer's setup is cleared when it restarts and is limited in size and time.
-- Settings saved by the streamer, such as a list of allowed usernames, are kept for as long as the streamer chooses to keep them.
+We do not aim to keep viewer information for longer than needed to run the Extension, but we cannot promise that none is kept. In practice:
+
+- The relay holds connection details only while a connection is open, but logs, caches and backups kept by the hosting platform or by us may last for a period outside our direct control.
+- Data held in memory on the streamer's setup is limited in size and time and is cleared when it restarts. Operational logs on the streamer's setup are kept as long as the streamer keeps them.
+- Settings saved by the streamer, such as a list of allowed usernames, are kept for as long as the streamer chooses.
 - Records kept by Twitch and Cloudflare follow their own retention rules.
+- We may keep information for longer where needed for security, to investigate abuse, to resolve disputes, to enforce our terms, or to meet legal obligations.
 
 ## 8. Cookies And Local Storage
 
-The Extension page does not set cookies and does not use your browser's local storage or session storage. Twitch itself may use cookies and similar technologies on its own pages and in its own frames.
+The Extension page is not designed to set cookies or use your browser's local or session storage. We may add such technologies in future if needed, and will update this policy if we do. Twitch itself may use cookies and similar technologies on its own pages and in its own frames, and your browser may keep ordinary cache data.
 
 ## 9. Legal Bases And Disclosure
 
@@ -90,14 +93,14 @@ The Extension uses encrypted connections, verifies the signed Twitch token on ev
 
 Depending on where you live, you may have the right to ask whether information about you is held, and to ask for it to be accessed, corrected, deleted, restricted or moved, and to object to its use or withdraw consent. You can also lodge a complaint with your local data protection authority.
 
-Because the Developer does not keep viewer data beyond forwarding it, there is usually nothing further to delete. In practice you can:
+The Developer does not set out to keep a profile of viewers, so there may be little or nothing to access or delete, and we may not be able to link information to you unless you share your Twitch user ID. In practice you can:
 
 - Stop sharing your identity at any time in your Twitch extension settings.
 - Close the Extension to end your connection to the relay.
 - Ask the streamer about data held on their own setup.
 - Contact the Developer using the details in section 15.
 
-We do not sell personal information, and we do not use it for targeted advertising. We will not treat you differently for exercising a privacy right.
+We do not sell personal information and do not currently use it for targeted advertising. We will not treat you differently for exercising a privacy right.
 
 ## 13. Children
 
