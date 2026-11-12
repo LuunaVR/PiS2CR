@@ -97,7 +97,7 @@ To the extent permitted by law, you agree to defend, indemnify and hold harmless
 
 ## 17. Governing Law And Disputes
 
-These Terms are governed by the laws that apply where the Developer is resident, without regard to conflict-of-law rules. Before starting any formal claim, you agree to first try in good faith to resolve the matter by contacting the Developer as described in section 20. Subject to any mandatory consumer rights you have in your country, disputes that cannot be resolved this way will be brought in the courts with jurisdiction over the Developer's place of residence. Nothing here limits any right you have that cannot be waived by contract.
+These Terms are governed by the applicable law, without regard to conflict-of-law rules. Before starting any formal claim, you agree to first try in good faith to resolve the matter by contacting the Developer as described in section 20. Disputes that cannot be resolved this way will be brought before a court of competent jurisdiction. Nothing here limits any right you have that cannot be waived by contract.
 
 ## 18. General
 
