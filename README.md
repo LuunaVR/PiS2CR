@@ -37,7 +37,7 @@ flowchart LR
 
 ## Setup
 
-1. Build the launcher once with `launcher/build.ps1` (needs Python).
+1. Download `PiS2CR.exe` from the [latest release](https://github.com/LuunaVR/P2S2CR/releases/latest), or build it yourself with `launcher/build.ps1` (needs Python). The exe is not code-signed, so Windows may warn on first run.
 2. Run `PiS2CR.exe`. On first run it opens a setup page.
 3. Press **Find My Pi** (or type its address), enter the Pi's username and password. The password is used once and never saved. Setup creates an SSH key for later logins.
 4. Press install. The first install takes several minutes because the Switch backend is built on the Pi.

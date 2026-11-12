@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        shell: pwsh
+        run: |
+          python -m pip install --quiet paramiko
+          Push-Location tools
+          python -m unittest test_pro2_chat test_pro2_history test_pro2_macro test_pro2_overlay_settings test_pro2_twitch
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Pop-Location
+          Push-Location launcher
+          python -m unittest test_launcher test_setup
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Build PiS2CR.exe
+        shell: pwsh
+        run: ./launcher/build.ps1
+
+      - name: Checksum
+        shell: pwsh
+        working-directory: launcher/dist
+        run: |
+          $hash = (Get-FileHash PiS2CR.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  PiS2CR.exe" | Set-Content -Encoding ascii PiS2CR.exe.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PiS2CR
+          path: |
+            launcher/dist/PiS2CR.exe
+            launcher/dist/PiS2CR.exe.sha256
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PiS2CR
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" PiS2CR.exe PiS2CR.exe.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "PiS2CR $TAG" \
+            --generate-notes \
+            --notes "The exe is not code-signed, so Windows SmartScreen may warn on first run. Verify it with the .sha256 file. Licensed under PolyForm Noncommercial 1.0.0."
