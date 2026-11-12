@@ -26,7 +26,7 @@ The Extension is delivered through Twitch and is also subject to the Twitch Term
 
 ## 5. License To Use
 
-Subject to these Terms, you may use the Extension for its intended purpose on Twitch. The Developer grants you a limited, revocable, non-exclusive, non-transferable, non-sublicensable right to do so. The source code of the project is licensed separately under the [LICENSE](../LICENSE) file in the repository, and that license governs your use of the code. These Terms do not override it.
+Subject to these Terms, you may use the Extension for its intended purpose on Twitch. The Developer grants you a limited, revocable, non-exclusive, non-transferable, non-sublicensable right to do so. The source code of the project is licensed separately under the [LICENSE](https://github.com/LuunaVR/PiS2CR/blob/main/LICENSE) file in the repository, and that license governs your use of the code. These Terms do not override it.
 
 ## 6. How The Extension Works
 
